@@ -3,55 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
+  <title>Roblox Archetype - Playstyle Analysis</title>
   <link href='/style.css' rel='stylesheet'>
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>Hello, world!</h1>
-      <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
-        <span class="icon-sun">☀️</span>
-        <span class="icon-moon">🌙</span>
-      </button>
+      <div class="logo">
+        <h1 data-i18n="title">Roblox Archetype</h1>
+        <span class="subtitle" data-i18n="subtitle">Discover Your Playstyle</span>
+      </div>
+      <div class="header-actions">
+        <div class="lang-switcher">
+          <button id="lang-en" class="lang-btn active">EN</button>
+          <button id="lang-ko" class="lang-btn">KO</button>
+        </div>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+          <span class="icon-sun">☀️</span>
+          <span class="icon-moon">🌙</span>
+        </button>
+      </div>
     </header>
-    <main>
-      <p>Click the button in the top right to switch between dark and light mode.</p>
 
+    <main>
+      <!-- Quick Analysis Section -->
+      <section id="quick-section" class="analysis-section">
+        <div class="section-header">
+          <h2 data-i18n="quick_title">Quick Analysis</h2>
+          <span class="badge badge-lite" data-i18n="no_login">No Login Required</span>
+        </div>
+        <p class="section-desc" data-i18n="quick_desc">Enter your Roblox username to get a quick playstyle estimate based on public data.</p>
+
+        <form id="quick-form" class="search-form">
+          <div class="input-group">
+            <input
+              type="text"
+              id="username-input"
+              name="username"
+              placeholder="Roblox Username"
+              data-i18n-placeholder="username_placeholder"
+              required
+            >
+            <button type="submit" class="btn btn-primary" data-i18n="analyze">Analyze</button>
+          </div>
+        </form>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading hidden">
+          <div class="spinner"></div>
+          <p data-i18n="loading">Analyzing your playstyle...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="error-box hidden">
+          <p id="error-message"></p>
+        </div>
+
+        <!-- Quick Result -->
+        <div id="quick-result" class="result-card hidden">
+          <div class="result-header">
+            <img id="result-avatar" src="" alt="Avatar" class="avatar">
+            <div class="result-info">
+              <h3 id="result-username"></h3>
+              <span class="badge badge-quick" data-i18n="quick_guess">Quick Guess</span>
+            </div>
+          </div>
+
+          <div class="archetype-result">
+            <div class="primary-archetype">
+              <span class="label" data-i18n="primary_type">Primary Type</span>
+              <div class="archetype-display">
+                <span id="primary-icon" class="archetype-icon"></span>
+                <span id="primary-name" class="archetype-name"></span>
+              </div>
+              <p id="primary-desc" class="archetype-desc"></p>
+            </div>
+
+            <div class="confidence-meter">
+              <span class="label" data-i18n="confidence">Confidence</span>
+              <div class="meter">
+                <div id="confidence-bar" class="meter-fill"></div>
+              </div>
+              <span id="confidence-text" class="confidence-value"></span>
+            </div>
+          </div>
+
+          <div class="scores-preview">
+            <span class="label" data-i18n="all_scores">All Archetype Scores</span>
+            <div id="scores-chart" class="scores-chart"></div>
+          </div>
+
+          <div class="cta-section">
+            <p data-i18n="want_accurate">Want more accurate results?</p>
+            <button id="login-cta" class="btn btn-secondary" data-i18n="login_roblox">Login with Roblox</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Full Analysis CTA -->
+      <section class="full-cta-section">
+        <div class="cta-card">
+          <h3 data-i18n="full_analysis">Full Analysis</h3>
+          <p data-i18n="full_desc">Login with Roblox OAuth and complete a survey for personalized, high-confidence results.</p>
+          <ul class="feature-list">
+            <li data-i18n="feature_1">8-question personality survey</li>
+            <li data-i18n="feature_2">Primary & Secondary archetype</li>
+            <li data-i18n="feature_3">Detailed score breakdown</li>
+            <li data-i18n="feature_4">Shareable result card</li>
+          </ul>
+          <button id="full-login-btn" class="btn btn-primary btn-large" data-i18n="get_started">Get Started</button>
+        </div>
+      </section>
+
+      <!-- Partnership Form -->
       <section class="contact-section">
-        <h2>제휴 문의</h2>
+        <h2 data-i18n="partnership">Partnership Inquiry</h2>
         <form action="https://formspree.io/f/mdadornl" method="POST" class="contact-form">
           <div class="form-group">
-            <label for="name">이름 / 회사명</label>
-            <input type="text" id="name" name="name" required placeholder="홍길동 / ABC 주식회사">
+            <label for="name" data-i18n="form_name">Name / Company</label>
+            <input type="text" id="name" name="name" required data-i18n-placeholder="form_name_placeholder">
           </div>
           <div class="form-group">
-            <label for="email">이메일</label>
+            <label for="email" data-i18n="form_email">Email</label>
             <input type="email" id="email" name="email" required placeholder="example@email.com">
           </div>
           <div class="form-group">
-            <label for="phone">연락처</label>
-            <input type="tel" id="phone" name="phone" placeholder="010-1234-5678">
+            <label for="message" data-i18n="form_message">Message</label>
+            <textarea id="message" name="message" rows="4" required data-i18n-placeholder="form_message_placeholder"></textarea>
           </div>
-          <div class="form-group">
-            <label for="subject">문의 유형</label>
-            <select id="subject" name="subject" required>
-              <option value="">선택해주세요</option>
-              <option value="partnership">제휴 제안</option>
-              <option value="sponsorship">스폰서십</option>
-              <option value="collaboration">콜라보레이션</option>
-              <option value="other">기타</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="message">문의 내용</label>
-            <textarea id="message" name="message" rows="5" required placeholder="제휴 관련 내용을 자세히 적어주세요."></textarea>
-          </div>
-          <button type="submit" class="submit-btn">문의하기</button>
+          <button type="submit" class="btn btn-primary" data-i18n="form_submit">Submit</button>
         </form>
       </section>
     </main>
+
+    <footer>
+      <p>&copy; 2025 Roblox Archetype. <span data-i18n="footer_note">This is a fan project, not affiliated with Roblox Corporation.</span></p>
+    </footer>
   </div>
-  <script defer type="text/javascript" src="/main.js"></script>
+
+  <script src="/i18n.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>
