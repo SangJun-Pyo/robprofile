@@ -12,6 +12,9 @@ const ARCHETYPES = {
   casual: { icon: '🎮', color: '#607D8B' }
 };
 
+// CORS Proxy configuration
+const CORS_PROXY = 'https://corsproxy.io/?';
+
 // Theme Toggle
 function initTheme() {
   const THEME_KEY = 'theme';
@@ -40,15 +43,46 @@ function initTheme() {
   document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
 }
 
-// Roblox API Proxy (using public endpoints)
+// Roblox API with CORS Proxy
 const RobloxAPI = {
+  // Helper to fetch with CORS proxy
+  async fetchWithProxy(url, options = {}) {
+    const proxyUrl = CORS_PROXY + encodeURIComponent(url);
+    const response = await fetch(proxyUrl, options);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+  },
+
+  // Search users by keyword (for autocomplete)
+  async searchUsers(keyword) {
+    if (!keyword || keyword.length < 2) return [];
+    try {
+      const url = `https://users.roblox.com/v1/users/search?keyword=${encodeURIComponent(keyword)}&limit=5`;
+      const data = await this.fetchWithProxy(url);
+      return data.data || [];
+    } catch (err) {
+      console.error('Search error:', err);
+      return [];
+    }
+  },
+
   // Resolve username to user ID
   async getUserByUsername(username) {
-    const response = await fetch('https://users.roblox.com/v1/usernames/users', {
+    const url = 'https://users.roblox.com/v1/usernames/users';
+    const proxyUrl = CORS_PROXY + encodeURIComponent(url);
+
+    const response = await fetch(proxyUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usernames: [username], excludeBannedUsers: true })
     });
+
+    if (!response.ok) {
+      throw new Error('API request failed');
+    }
+
     const data = await response.json();
     if (data.data && data.data.length > 0) {
       return data.data[0];
@@ -58,19 +92,20 @@ const RobloxAPI = {
 
   // Get user profile
   async getUserProfile(userId) {
-    const response = await fetch(`https://users.roblox.com/v1/users/${userId}`);
-    if (!response.ok) throw new Error('Failed to fetch profile');
-    return response.json();
+    const url = `https://users.roblox.com/v1/users/${userId}`;
+    return this.fetchWithProxy(url);
   },
 
   // Get user avatar thumbnail
   async getAvatarUrl(userId) {
-    const response = await fetch(
-      `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`
-    );
-    const data = await response.json();
-    if (data.data && data.data.length > 0) {
-      return data.data[0].imageUrl;
+    try {
+      const url = `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`;
+      const data = await this.fetchWithProxy(url);
+      if (data.data && data.data.length > 0) {
+        return data.data[0].imageUrl;
+      }
+    } catch {
+      // Fallback to default avatar
     }
     return null;
   },
@@ -78,11 +113,8 @@ const RobloxAPI = {
   // Get user badges (public)
   async getUserBadges(userId) {
     try {
-      const response = await fetch(
-        `https://badges.roblox.com/v1/users/${userId}/badges?limit=100&sortOrder=Desc`
-      );
-      if (!response.ok) return [];
-      const data = await response.json();
+      const url = `https://badges.roblox.com/v1/users/${userId}/badges?limit=100&sortOrder=Desc`;
+      const data = await this.fetchWithProxy(url);
       return data.data || [];
     } catch {
       return [];
@@ -92,9 +124,8 @@ const RobloxAPI = {
   // Get user groups (public)
   async getUserGroups(userId) {
     try {
-      const response = await fetch(`https://groups.roblox.com/v1/users/${userId}/groups/roles`);
-      if (!response.ok) return [];
-      const data = await response.json();
+      const url = `https://groups.roblox.com/v1/users/${userId}/groups/roles`;
+      const data = await this.fetchWithProxy(url);
       return data.data || [];
     } catch {
       return [];
@@ -195,6 +226,134 @@ const AnalysisEngine = {
   }
 };
 
+// Autocomplete Controller
+const Autocomplete = {
+  container: null,
+  input: null,
+  debounceTimer: null,
+  isOpen: false,
+
+  init(inputElement) {
+    this.input = inputElement;
+    this.createContainer();
+    this.setupListeners();
+  },
+
+  createContainer() {
+    this.container = document.createElement('div');
+    this.container.className = 'autocomplete-container';
+    this.container.innerHTML = '<ul class="autocomplete-list"></ul>';
+    this.input.parentElement.style.position = 'relative';
+    this.input.parentElement.appendChild(this.container);
+  },
+
+  setupListeners() {
+    // Input event with debounce
+    this.input.addEventListener('input', (e) => {
+      clearTimeout(this.debounceTimer);
+      const query = e.target.value.trim();
+
+      if (query.length < 2) {
+        this.close();
+        return;
+      }
+
+      this.debounceTimer = setTimeout(() => this.search(query), 300);
+    });
+
+    // Close on blur (with delay for click)
+    this.input.addEventListener('blur', () => {
+      setTimeout(() => this.close(), 200);
+    });
+
+    // Keyboard navigation
+    this.input.addEventListener('keydown', (e) => {
+      if (!this.isOpen) return;
+
+      const items = this.container.querySelectorAll('.autocomplete-item');
+      const active = this.container.querySelector('.autocomplete-item.active');
+      let index = Array.from(items).indexOf(active);
+
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          index = Math.min(index + 1, items.length - 1);
+          this.setActive(items, index);
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          index = Math.max(index - 1, 0);
+          this.setActive(items, index);
+          break;
+        case 'Enter':
+          if (active) {
+            e.preventDefault();
+            this.selectItem(active);
+          }
+          break;
+        case 'Escape':
+          this.close();
+          break;
+      }
+    });
+  },
+
+  setActive(items, index) {
+    items.forEach((item, i) => {
+      item.classList.toggle('active', i === index);
+    });
+  },
+
+  async search(query) {
+    const users = await RobloxAPI.searchUsers(query);
+    this.render(users);
+  },
+
+  render(users) {
+    const list = this.container.querySelector('.autocomplete-list');
+
+    if (users.length === 0) {
+      this.close();
+      return;
+    }
+
+    list.innerHTML = users.slice(0, 3).map((user, index) => `
+      <li class="autocomplete-item ${index === 0 ? 'active' : ''}" data-username="${user.name}" data-userid="${user.id}">
+        <span class="autocomplete-name">${user.name}</span>
+        ${user.displayName !== user.name ? `<span class="autocomplete-display">(@${user.displayName})</span>` : ''}
+      </li>
+    `).join('');
+
+    // Add click handlers
+    list.querySelectorAll('.autocomplete-item').forEach(item => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        this.selectItem(item);
+      });
+    });
+
+    this.open();
+  },
+
+  selectItem(item) {
+    const username = item.getAttribute('data-username');
+    this.input.value = username;
+    this.close();
+    // Trigger form submit
+    this.input.closest('form')?.dispatchEvent(new Event('submit', { cancelable: true }));
+  },
+
+  open() {
+    this.container.classList.add('open');
+    this.isOpen = true;
+  },
+
+  close() {
+    this.container.classList.remove('open');
+    this.isOpen = false;
+  }
+};
+
 // UI Controller
 const UI = {
   elements: {},
@@ -218,6 +377,11 @@ const UI = {
     };
 
     this.elements.form?.addEventListener('submit', (e) => this.handleSubmit(e));
+
+    // Initialize autocomplete
+    if (this.elements.usernameInput) {
+      Autocomplete.init(this.elements.usernameInput);
+    }
   },
 
   showLoading() {
