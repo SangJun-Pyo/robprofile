@@ -23,7 +23,7 @@
 
     <main class="legal-page">
       <h1>Privacy Policy</h1>
-      <p class="last-updated">Last Updated: February 1, 2025</p>
+      <p class="last-updated">Last Updated: February 4, 2026</p>
 
       <section class="legal-section">
         <h2>1. Introduction</h2>
@@ -38,24 +38,41 @@
           <li><strong>Contact Information:</strong> If you use our contact form, we collect your name, email address, and message content.</li>
         </ul>
 
-        <h3>2.2 Information from Roblox</h3>
-        <p>We access only publicly available information from Roblox profiles, including:</p>
+        <h3>2.2 Information from Roblox (Public Data)</h3>
+        <p>For quick analysis, we access only publicly available information from Roblox profiles, including:</p>
         <ul>
           <li>Public profile information (username, display name, account age)</li>
           <li>Public badges earned</li>
           <li>Public group memberships</li>
           <li>Avatar thumbnail (public image)</li>
         </ul>
-        <p><strong>We do NOT collect:</strong></p>
+
+        <h3>2.3 Information from Roblox OAuth (With Your Consent)</h3>
+        <p>When you choose to use the full analysis feature and authorize our application through Roblox OAuth, we request access to the following scopes with your explicit consent:</p>
+        <ul>
+          <li><strong>openid:</strong> Basic authentication to verify your identity</li>
+          <li><strong>profile:</strong> Your Roblox user ID, username, display name, and profile URL</li>
+        </ul>
+        <p><strong>How we use OAuth data:</strong></p>
+        <ul>
+          <li>To provide personalized playstyle analysis</li>
+          <li>To verify your account ownership for accurate results</li>
+          <li>To display your profile information in your analysis results</li>
+        </ul>
+        <p><strong>Data retention:</strong> OAuth tokens are stored only for the duration of your session. We do not store your OAuth access tokens or refresh tokens permanently. Your analysis results are processed in real-time and not stored on our servers.</p>
+
+        <h3>2.4 What We Do NOT Collect</h3>
+        <p><strong>We do NOT collect or request access to:</strong></p>
         <ul>
           <li>Passwords or login credentials</li>
           <li>Private messages or friend lists</li>
           <li>Transaction history or Robux balance</li>
           <li>Email addresses or personal identification from Roblox</li>
-          <li>Any private profile information</li>
+          <li>Any private profile information beyond the scopes listed above</li>
+          <li>Ability to take actions on your behalf</li>
         </ul>
 
-        <h3>2.3 Automatically Collected Information</h3>
+        <h3>2.5 Automatically Collected Information</h3>
         <p>Like most websites, we may collect standard log information such as IP addresses, browser type, and access times for security and analytics purposes.</p>
       </section>
 
@@ -79,7 +96,7 @@
         <h2>5. Third-Party Services</h2>
         <p>Our service uses the following third-party services:</p>
         <ul>
-          <li><strong>Roblox API:</strong> To fetch public profile data for analysis</li>
+          <li><strong>Roblox API & OAuth 2.0:</strong> To fetch profile data for analysis and authenticate users who opt for full analysis</li>
           <li><strong>Formspree:</strong> To process contact form submissions</li>
           <li><strong>Google AdSense:</strong> To display advertisements</li>
           <li><strong>Cloudflare:</strong> For hosting and security</li>
@@ -105,6 +122,7 @@
           <li>Request deletion of your data</li>
           <li>Opt-out of personalized advertising</li>
           <li>Contact us with privacy concerns</li>
+          <li><strong>Revoke OAuth access:</strong> You can revoke our application's access to your Roblox account at any time through your Roblox account settings under "Connected Apps" or "Third-Party Apps"</li>
         </ul>
       </section>
 
