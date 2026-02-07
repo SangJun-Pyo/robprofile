@@ -1,7 +1,13 @@
 // GET /api/detail/[userId]
-// Detailed analysis with personalized game recommendations
+// Detailed analysis with Discover-based personalized game recommendations
 
-import { RECOMMENDATION_RULES, getRecommendedGames } from '../../lib/recommendation.js';
+import {
+  ARCHETYPE_TO_TAGS,
+  generateGameTags,
+  calculateRecommendationScore,
+  getRecommendationReason,
+  getPersonalizedRecommendations
+} from '../../lib/recommendation.js';
 
 export async function onRequestGet(context) {
   const { params } = context;
@@ -32,58 +38,19 @@ export async function onRequestGet(context) {
     // Step 2: Fetch badges with pagination (up to 200)
     const allBadges = await fetchBadgesWithPagination(userId, 200);
 
-    // Step 3: Extract unique universeIds from badges
-    const universeMap = new Map(); // universeId -> { badges: [], count: 0 }
-
-    for (const badge of allBadges) {
-      const universeId = badge.awarder?.id;
-      if (!universeId) continue;
-
-      if (!universeMap.has(universeId)) {
-        universeMap.set(universeId, {
-          universeId,
-          badges: [],
-          badgeCount: 0
-        });
+    // Step 3: Fetch groups
+    let groups = [];
+    try {
+      const groupsResponse = await fetch(`https://groups.roblox.com/v2/users/${userId}/groups/roles`);
+      if (groupsResponse.ok) {
+        const groupsData = await groupsResponse.json();
+        groups = groupsData.data || [];
       }
-
-      const entry = universeMap.get(universeId);
-      entry.badges.push({
-        id: badge.id,
-        name: badge.name,
-        description: badge.description
-      });
-      entry.badgeCount++;
+    } catch (e) {
+      console.error('Groups fetch error:', e);
     }
 
-    // Step 4: Fetch game metadata for unique universes (batch request)
-    const universeIds = Array.from(universeMap.keys());
-    const gamesMetadata = await fetchGamesMetadata(universeIds);
-
-    // Step 5: Merge game metadata with badge data
-    const games = [];
-
-    for (const [universeId, entry] of universeMap) {
-      const gameMeta = gamesMetadata[universeId];
-      if (!gameMeta) continue;
-
-      games.push({
-        universeId,
-        name: gameMeta.name,
-        description: gameMeta.description,
-        creator: gameMeta.creator,
-        rootPlaceId: gameMeta.rootPlaceId,
-        genre: gameMeta.genre,
-        playing: gameMeta.playing,
-        visits: gameMeta.visits,
-        maxPlayers: gameMeta.maxPlayers,
-        created: gameMeta.created,
-        updated: gameMeta.updated,
-        badgeCount: entry.badgeCount
-      });
-    }
-
-    // Step 6: Fetch avatar thumbnail
+    // Step 4: Fetch avatar thumbnail
     let avatarUrl = null;
     try {
       const thumbResponse = await fetch(
@@ -97,32 +64,13 @@ export async function onRequestGet(context) {
       console.error('Avatar fetch error:', e);
     }
 
-    // Step 7: Fetch groups for additional context
-    let groups = [];
-    try {
-      const groupsResponse = await fetch(`https://groups.roblox.com/v2/users/${userId}/groups/roles`);
-      if (groupsResponse.ok) {
-        const groupsData = await groupsResponse.json();
-        groups = groupsData.data || [];
-      }
-    } catch (e) {
-      console.error('Groups fetch error:', e);
-    }
+    // Step 5: Calculate archetype scores
+    const archetypeScores = calculateDetailedArchetypeScores(allBadges, groups, profile);
 
-    // Step 8: Calculate detailed archetype scores
-    const archetypeScores = calculateDetailedArchetypeScores(games, allBadges, groups, profile);
+    // Step 6: Get personalized recommendations from Discover/Charts
+    const recommendations = await getPersonalizedRecommendations(archetypeScores.scores, 25);
 
-    // Step 9: Calculate game recommendations based on archetype
-    const recommendedGames = getRecommendedGames(games, archetypeScores.scores, 30);
-
-    // Add icon URLs to recommended games
-    const gamesWithIcons = recommendedGames.map(game => ({
-      ...game,
-      iconUrl: `https://thumbnails.roblox.com/v1/games/icons?universeIds=${game.universeId}&size=150x150&format=Png&isCircular=false`,
-      gameUrl: `https://www.roblox.com/games/${game.rootPlaceId}`
-    }));
-
-    // Step 10: Build response
+    // Step 7: Build response
     const response = {
       profile: {
         id: profile.id,
@@ -136,12 +84,11 @@ export async function onRequestGet(context) {
       avatarUrl,
       stats: {
         totalBadges: allBadges.length,
-        gamesAnalyzed: games.length,
         totalGroups: groups.length,
         accountAgeDays: Math.floor((Date.now() - new Date(profile.created).getTime()) / (1000 * 60 * 60 * 24))
       },
       archetypeScores,
-      recommendations: gamesWithIcons,
+      recommendations,
       groups: groups.slice(0, 20)
     };
 
@@ -166,12 +113,12 @@ export async function onRequestGet(context) {
 async function fetchBadgesWithPagination(userId, maxBadges) {
   const badges = [];
   let cursor = null;
-  const limit = 100; // Max per request
+  const limit = 100;
 
   while (badges.length < maxBadges) {
     const url = new URL(`https://badges.roblox.com/v1/users/${userId}/badges`);
     url.searchParams.set('limit', limit);
-    url.searchParams.set('sortOrder', 'Desc'); // Most recent first
+    url.searchParams.set('sortOrder', 'Desc');
     if (cursor) {
       url.searchParams.set('cursor', cursor);
     }
@@ -183,41 +130,14 @@ async function fetchBadgesWithPagination(userId, maxBadges) {
     badges.push(...(data.data || []));
 
     cursor = data.nextPageCursor;
-    if (!cursor) break; // No more pages
+    if (!cursor) break;
   }
 
   return badges.slice(0, maxBadges);
 }
 
-// Fetch game metadata in batches
-async function fetchGamesMetadata(universeIds) {
-  const metadata = {};
-  if (universeIds.length === 0) return metadata;
-
-  // Batch in groups of 100 (API limit)
-  const batchSize = 100;
-  for (let i = 0; i < universeIds.length; i += batchSize) {
-    const batch = universeIds.slice(i, i + batchSize);
-    const url = `https://games.roblox.com/v1/games?universeIds=${batch.join(',')}`;
-
-    try {
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        for (const game of (data.data || [])) {
-          metadata[game.id] = game;
-        }
-      }
-    } catch (e) {
-      console.error('Games metadata fetch error:', e);
-    }
-  }
-
-  return metadata;
-}
-
-// Calculate archetype scores based on detailed game/badge/group analysis
-function calculateDetailedArchetypeScores(games, badges, groups, profile) {
+// Calculate archetype scores based on badges and groups
+function calculateDetailedArchetypeScores(badges, groups, profile) {
   const scores = {
     explorer: 0,
     grinder: 0,
@@ -229,41 +149,25 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
     casual: 0
   };
 
-  // Use keywords from RECOMMENDATION_RULES for consistency
+  // Use ARCHETYPE_TO_TAGS for keyword matching
   const archetypeKeywords = {};
-  for (const [archetype, rules] of Object.entries(RECOMMENDATION_RULES)) {
-    archetypeKeywords[archetype] = rules.keywords;
+  for (const [archetype, mapping] of Object.entries(ARCHETYPE_TO_TAGS)) {
+    archetypeKeywords[archetype] = mapping.want;
   }
 
-  // 1. Analyze games by name/genre (weighted by badge count as engagement proxy)
-  const maxBadgeCount = Math.max(...games.map(g => g.badgeCount), 1);
-
-  for (const game of games) {
-    const text = `${game.name} ${game.description || ''} ${game.genre || ''}`.toLowerCase();
-    const engagementWeight = game.badgeCount / maxBadgeCount; // 0-1
-
-    for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
-      for (const kw of keywords) {
-        if (text.includes(kw)) {
-          scores[archetype] += 3 * (0.5 + engagementWeight * 0.5); // Base + engagement bonus
-        }
-      }
-    }
-  }
-
-  // 2. Analyze badges
+  // 1. Analyze badges
   for (const badge of badges) {
     const text = `${badge.name} ${badge.description || ''}`.toLowerCase();
     for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
       for (const kw of keywords) {
         if (text.includes(kw)) {
-          scores[archetype] += 0.5;
+          scores[archetype] += 1;
         }
       }
     }
   }
 
-  // 3. Analyze groups
+  // 2. Analyze groups
   for (const g of groups) {
     const text = (g.group?.name || '').toLowerCase();
     for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
@@ -275,39 +179,34 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
     }
   }
 
-  // 4. Apply meta-signals
-  // Many unique games = Explorer tendency
-  if (games.length > 20) scores.explorer += 5;
-  if (games.length > 40) scores.explorer += 5;
+  // 3. Apply meta-signals
+  // Many badges = likely Grinder
+  if (badges.length > 50) scores.grinder += 3;
+  if (badges.length > 100) scores.grinder += 5;
 
-  // High badge concentration = Grinder tendency
-  const avgBadgesPerGame = badges.length / Math.max(games.length, 1);
-  if (avgBadgesPerGame > 3) scores.grinder += 5;
-  if (avgBadgesPerGame > 5) scores.grinder += 5;
-
-  // Many groups = Socializer tendency
+  // Many groups = likely Socializer
   if (groups.length > 10) scores.socializer += 3;
   if (groups.length > 20) scores.socializer += 5;
 
   // Account age signals
   const accountAgeDays = Math.floor((Date.now() - new Date(profile.created).getTime()) / (1000 * 60 * 60 * 24));
-  if (accountAgeDays > 365 * 3) scores.grinder += 3; // Veterans tend to be dedicated
-  if (accountAgeDays < 180 && badges.length < 20) scores.casual += 5; // New + few badges = casual
+  if (accountAgeDays > 365 * 3) scores.grinder += 3;
+  if (accountAgeDays < 180 && badges.length < 20) scores.casual += 5;
 
-  // 5. Normalize scores to 0-1
+  // 4. Normalize scores to 0-1
   const total = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
   const normalized = {};
   for (const [key, value] of Object.entries(scores)) {
     normalized[key] = Math.round((value / total) * 100) / 100;
   }
 
-  // 6. Sort and determine primary/secondary
+  // 5. Determine primary/secondary
   const sorted = Object.entries(normalized).sort((a, b) => b[1] - a[1]);
   const primary = sorted[0][0];
   const secondary = sorted[1][0];
 
-  // 7. Calculate confidence
-  const signalStrength = Math.min((badges.length + games.length * 2 + groups.length) / 100, 1);
+  // 6. Calculate confidence
+  const signalStrength = Math.min((badges.length + groups.length * 2) / 80, 1);
   const margin = sorted[0][1] - sorted[1][1];
   const confidence = Math.min(0.5 * signalStrength + 0.5 * margin * 2, 0.95);
 

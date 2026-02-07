@@ -1,4 +1,4 @@
-// Detail Analysis Page - Personalized Recommendations
+// Detail Analysis Page - Discover-based Recommendations
 
 const ARCHETYPES = {
   explorer: { icon: '🧭', color: '#4CAF50' },
@@ -12,17 +12,16 @@ const ARCHETYPES = {
 };
 
 const PERSONALIZED_INSIGHTS = {
-  explorer: "You have a natural curiosity for discovering new experiences. Your playstyle suggests you enjoy variety and adventure. We recommend games that offer exploration, quests, and new worlds to discover.",
-  grinder: "Your dedication to progression is impressive! You thrive on long-term goals and visible achievements. We suggest games with deep progression systems, prestige mechanics, and rewarding grind loops.",
-  socializer: "Connection is at the heart of your gaming experience. You value community and friendships. We recommend games with vibrant social features, hangout spaces, and cooperative gameplay.",
-  competitor: "You're driven by challenge and the thrill of competition. Improvement and victory motivate you. We suggest games with PvP, ranked modes, and skill-based matchmaking.",
-  builder: "Creativity flows through your gameplay. You love to design, construct, and express yourself. We recommend sandbox games, building experiences, and creative tools.",
-  trader: "You have a keen eye for value and economics. Strategic thinking is your strength. We suggest games with trading systems, market economies, and business simulations.",
-  roleplayer: "Your imagination transforms every game into a story. Character and narrative drive your experience. We recommend games with rich lore, roleplay communities, and immersive worlds.",
-  casual: "You play for pure enjoyment without pressure. Fun and relaxation are your priorities. We suggest accessible games with quick sessions and simple mechanics."
+  explorer: "You have a natural curiosity for discovering new experiences. We've selected games that offer exploration, adventure, and new worlds to discover based on your playstyle.",
+  grinder: "Your dedication to progression is impressive! We've selected games with deep progression systems and rewarding grind loops that match your playstyle.",
+  socializer: "Connection is at the heart of your gaming. We've selected games with vibrant communities and social features that match your playstyle.",
+  competitor: "You're driven by challenge and competition. We've selected games with PvP and skill-based gameplay that match your playstyle.",
+  builder: "Creativity flows through your gameplay. We've selected sandbox and creative games that match your playstyle.",
+  trader: "You have a keen eye for value. We've selected games with trading and economy systems that match your playstyle.",
+  roleplayer: "Your imagination transforms games into stories. We've selected immersive roleplay experiences that match your playstyle.",
+  casual: "You play for pure enjoyment. We've selected fun, accessible games that match your laid-back playstyle."
 };
 
-// Theme Toggle
 function initTheme() {
   const THEME_KEY = 'theme';
   const getPreferredTheme = () => {
@@ -50,7 +49,6 @@ function initTheme() {
   document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
 }
 
-// Fetch detailed analysis
 async function fetchDetailAnalysis(userId) {
   const response = await fetch(`/api/detail/${userId}`);
   if (!response.ok) {
@@ -60,9 +58,8 @@ async function fetchDetailAnalysis(userId) {
   return response.json();
 }
 
-// Render the detail page
 function renderDetail(data) {
-  const { profile, avatarUrl, stats, recommendations, archetypeScores, groups } = data;
+  const { profile, avatarUrl, stats, recommendations, archetypeScores } = data;
 
   // User header
   document.getElementById('detail-avatar').src = avatarUrl ||
@@ -70,7 +67,7 @@ function renderDetail(data) {
   document.getElementById('detail-displayname').textContent = profile.displayName;
   document.getElementById('detail-username').textContent = profile.name;
 
-  // Account age text
+  // Account age
   const years = Math.floor(stats.accountAgeDays / 365);
   const months = Math.floor((stats.accountAgeDays % 365) / 30);
   let ageText = '';
@@ -81,7 +78,6 @@ function renderDetail(data) {
 
   // Stats
   document.getElementById('stat-badges').textContent = stats.totalBadges.toLocaleString();
-  document.getElementById('stat-games').textContent = stats.gamesAnalyzed.toLocaleString();
   document.getElementById('stat-groups').textContent = stats.totalGroups.toLocaleString();
   document.getElementById('stat-age').textContent = stats.accountAgeDays.toLocaleString();
 
@@ -124,16 +120,16 @@ function renderDetail(data) {
   document.getElementById('recommendation-text').textContent =
     i18n.t(`insight_${primary}`) || PERSONALIZED_INSIGHTS[primary];
 
-  // Recommended games list
+  // Recommended games
   const gamesList = document.getElementById('games-list');
   if (!recommendations || recommendations.length === 0) {
     gamesList.innerHTML = `
       <div class="empty-state">
-        <p>${i18n.t('no_recommendations') || 'Unable to generate recommendations. Try analyzing more data.'}</p>
+        <p>${i18n.t('no_recommendations') || 'Unable to load recommendations. Please try again later.'}</p>
       </div>
     `;
   } else {
-    gamesList.innerHTML = recommendations.slice(0, 20).map((game) => {
+    gamesList.innerHTML = recommendations.map((game) => {
       const matchLevel = game.recommendationScore >= 70 ? 'high'
         : game.recommendationScore >= 40 ? 'medium' : 'low';
       const matchLabel = game.recommendationScore >= 70
@@ -141,6 +137,11 @@ function renderDetail(data) {
         : game.recommendationScore >= 40
           ? (i18n.t('good_match') || 'Good Match')
           : (i18n.t('suggested') || 'Suggested');
+
+      // Render tags (max 4)
+      const tagsHtml = (game.tags || []).slice(0, 4).map(tag =>
+        `<span class="game-tag">${tag}</span>`
+      ).join('');
 
       return `
         <a href="${game.gameUrl}" target="_blank" rel="noopener" class="game-link">
@@ -154,10 +155,14 @@ function renderDetail(data) {
             <div class="game-info">
               <div class="game-name">${escapeHtml(game.name)}</div>
               <div class="game-meta">
-                ${game.genre ? `<span>${game.genre}</span> · ` : ''}
+                ${game.genre ? `<span>${game.genre}</span>` : ''}
+                <span class="playing-badge">
+                  <span class="playing-dot"></span>
+                  ${formatNumber(game.playing)} ${i18n.t('playing') || 'playing'}
+                </span>
                 <span>${formatNumber(game.visits)} ${i18n.t('visits') || 'visits'}</span>
-                ${game.playing ? ` · <span>${formatNumber(game.playing)} ${i18n.t('playing') || 'playing'}</span>` : ''}
               </div>
+              <div class="game-tags">${tagsHtml}</div>
             </div>
             <div class="game-recommendation">
               <div class="recommendation-score">
@@ -167,7 +172,7 @@ function renderDetail(data) {
                 <span class="score-value">${game.recommendationScore}%</span>
               </div>
               <span class="match-badge ${matchLevel}">${matchLabel}</span>
-              <div class="recommendation-reason">${game.recommendationReason}</div>
+              <div class="recommendation-reason">${i18n.t('recommended_for_' + primary) || game.recommendationReason || `Recommended for your ${i18n.t(primary)} playstyle`}</div>
             </div>
           </div>
         </a>
@@ -175,19 +180,17 @@ function renderDetail(data) {
     }).join('');
   }
 
-  // Show result, hide loading
+  // Show result
   document.getElementById('detail-loading').classList.add('hidden');
   document.getElementById('detail-result').classList.remove('hidden');
 }
 
-// Show error
 function showError(message) {
   document.getElementById('detail-loading').classList.add('hidden');
   document.getElementById('detail-error').classList.remove('hidden');
   document.getElementById('detail-error-message').textContent = message;
 }
 
-// Utility functions
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -202,11 +205,9 @@ function formatNumber(num) {
   return num.toLocaleString();
 }
 
-// Initialize
 async function init() {
   initTheme();
 
-  // Get userId from URL params
   const urlParams = new URLSearchParams(window.location.search);
   const userId = urlParams.get('userId');
 

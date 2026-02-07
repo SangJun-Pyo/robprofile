@@ -11,7 +11,6 @@
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7297276836963940"
      crossorigin="anonymous"></script>
   <style>
-    /* Detail page specific styles */
     .detail-header {
       display: flex;
       align-items: center;
@@ -74,6 +73,13 @@
       gap: 0.5rem;
     }
 
+    .section-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: 0.5rem;
+      font-weight: normal;
+    }
+
     .games-list {
       display: flex;
       flex-direction: column;
@@ -119,11 +125,29 @@
     .game-meta {
       font-size: 0.8rem;
       color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .game-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem;
+      margin-top: 0.25rem;
+    }
+
+    .game-tag {
+      font-size: 0.65rem;
+      padding: 0.15rem 0.4rem;
+      background: var(--secondary-bg);
+      border-radius: 4px;
+      color: var(--text-muted);
     }
 
     .game-recommendation {
       text-align: right;
-      min-width: 100px;
+      min-width: 110px;
     }
 
     .recommendation-score {
@@ -161,6 +185,21 @@
       font-style: italic;
     }
 
+    .match-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .match-badge.high { background: #4CAF50; }
+    .match-badge.medium { background: #FF9800; }
+    .match-badge.low { background: #9E9E9E; }
+
     .archetype-result-detail {
       background: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -176,19 +215,9 @@
       margin-bottom: 1rem;
     }
 
-    .archetype-icon-large {
-      font-size: 3rem;
-    }
-
-    .archetype-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-
-    .archetype-subtitle {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-    }
+    .archetype-icon-large { font-size: 3rem; }
+    .archetype-title { font-size: 1.5rem; font-weight: 700; }
+    .archetype-subtitle { color: var(--text-muted); font-size: 0.9rem; }
 
     .confidence-detail {
       display: flex;
@@ -227,18 +256,9 @@
       border-radius: 8px;
     }
 
-    .score-icon {
-      font-size: 1.25rem;
-    }
-
-    .score-info {
-      flex: 1;
-    }
-
-    .score-name {
-      font-weight: 500;
-      font-size: 0.9rem;
-    }
+    .score-icon { font-size: 1.25rem; }
+    .score-info { flex: 1; }
+    .score-name { font-weight: 500; font-size: 0.9rem; }
 
     .score-bar-container {
       height: 6px;
@@ -248,21 +268,8 @@
       overflow: hidden;
     }
 
-    .score-bar-fill {
-      height: 100%;
-      border-radius: 3px;
-    }
-
-    .score-percent {
-      font-weight: 600;
-      font-size: 0.9rem;
-      min-width: 40px;
-      text-align: right;
-    }
-
-    .recommendations-section {
-      margin-top: 2rem;
-    }
+    .score-bar-fill { height: 100%; border-radius: 3px; }
+    .score-percent { font-weight: 600; font-size: 0.9rem; min-width: 40px; text-align: right; }
 
     .recommendation-card {
       background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
@@ -272,17 +279,10 @@
       margin-top: 1.5rem;
     }
 
-    .recommendation-title {
-      font-size: 1.1rem;
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
+    .recommendation-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .recommendation-text { opacity: 0.9; font-size: 0.95rem; line-height: 1.5; }
 
-    .recommendation-text {
-      opacity: 0.9;
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
+    .recommendations-section { margin-top: 2rem; }
 
     .disclaimer {
       background: var(--secondary-bg);
@@ -295,9 +295,7 @@
       text-align: center;
     }
 
-    .disclaimer-icon {
-      margin-right: 0.5rem;
-    }
+    .disclaimer-icon { margin-right: 0.5rem; }
 
     .back-link {
       display: inline-flex;
@@ -313,63 +311,41 @@
       color: var(--text-muted);
     }
 
-    .game-link {
-      color: inherit;
-      text-decoration: none;
-    }
+    .game-link { color: inherit; text-decoration: none; }
+    .game-link:hover .game-name { color: var(--primary-color); }
 
-    .game-link:hover .game-name {
-      color: var(--primary-color);
-    }
-
-    .match-badge {
+    .playing-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.25rem;
-      background: var(--primary-color);
-      color: white;
-      padding: 0.2rem 0.5rem;
-      border-radius: 10px;
-      font-size: 0.7rem;
-      font-weight: 600;
+      color: #4CAF50;
+      font-weight: 500;
     }
 
-    .match-badge.high {
+    .playing-dot {
+      width: 6px;
+      height: 6px;
       background: #4CAF50;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
     }
 
-    .match-badge.medium {
-      background: #FF9800;
-    }
-
-    .match-badge.low {
-      background: #9E9E9E;
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     @media (max-width: 600px) {
-      .detail-header {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .game-recommendation {
-        min-width: 80px;
-      }
-
-      .game-icon {
-        width: 48px;
-        height: 48px;
-      }
-
-      .recommendation-reason {
-        display: none;
-      }
+      .detail-header { flex-direction: column; text-align: center; }
+      .game-recommendation { min-width: 80px; }
+      .game-icon { width: 48px; height: 48px; }
+      .recommendation-reason { display: none; }
+      .game-tags { display: none; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <!-- Navigation -->
     <nav class="main-nav">
       <a href="/" class="nav-logo">Roblox Archetype</a>
       <ul class="nav-links">
@@ -393,21 +369,17 @@
     <main>
       <a href="/" class="back-link">← <span data-i18n="back_home">Back to Home</span></a>
 
-      <!-- Loading State -->
       <div id="detail-loading" class="loading">
         <div class="spinner"></div>
         <p data-i18n="loading_detail">Analyzing your playstyle...</p>
       </div>
 
-      <!-- Error State -->
       <div id="detail-error" class="error-box hidden">
         <p id="detail-error-message"></p>
         <a href="/" class="btn btn-primary" style="margin-top: 1rem;">Try Again</a>
       </div>
 
-      <!-- Result Container -->
       <div id="detail-result" class="hidden">
-        <!-- User Header -->
         <div class="detail-header">
           <img id="detail-avatar" src="" alt="Avatar" class="detail-avatar">
           <div class="detail-user-info">
@@ -417,15 +389,10 @@
           </div>
         </div>
 
-        <!-- Stats Grid -->
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-value" id="stat-badges">0</div>
             <div class="stat-label" data-i18n="stat_badges">Badges Earned</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="stat-games">0</div>
-            <div class="stat-label" data-i18n="stat_games_analyzed">Games Analyzed</div>
           </div>
           <div class="stat-card">
             <div class="stat-value" id="stat-groups">0</div>
@@ -437,7 +404,6 @@
           </div>
         </div>
 
-        <!-- Archetype Result -->
         <div class="archetype-result-detail">
           <div class="archetype-header">
             <span id="detail-archetype-icon" class="archetype-icon-large"></span>
@@ -467,26 +433,24 @@
           </div>
         </div>
 
-        <!-- Recommended Games Section -->
         <div class="recommendations-section">
           <h2 class="section-title">
             <span>🎯</span>
-            <span data-i18n="recommended_games">Recommended For You</span>
+            <span data-i18n="recommended_games">Recommended Games</span>
+            <span class="section-subtitle" data-i18n="live_games_note">(Live games with 500+ players)</span>
           </h2>
-          <p class="section-desc" data-i18n="recommendations_desc">Games suggested based on your playstyle archetype. Higher match = better fit for you.</p>
+          <p class="section-desc" data-i18n="recommendations_desc">Games from Roblox Discover, ranked by how well they match your playstyle.</p>
 
           <div id="games-list" class="games-list"></div>
 
-          <!-- Disclaimer -->
           <div class="disclaimer">
             <span class="disclaimer-icon">ℹ️</span>
-            <span data-i18n="disclaimer_text">These are personalized recommendations based on your playstyle archetype analysis, not a record of your gameplay history.</span>
+            <span data-i18n="disclaimer_text">These are personalized recommendations based on your playstyle archetype, not a record of your gameplay history.</span>
           </div>
         </div>
       </div>
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
       <div class="footer-bottom">
         <p>&copy; 2026 Roblox Archetype. <span data-i18n="footer_note">This is a fan project, not affiliated with Roblox Corporation.</span></p>
