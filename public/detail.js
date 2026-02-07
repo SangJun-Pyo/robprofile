@@ -1,4 +1,4 @@
-// Detail Analysis Page
+// Detail Analysis Page - Personalized Recommendations
 
 const ARCHETYPES = {
   explorer: { icon: '🧭', color: '#4CAF50' },
@@ -11,15 +11,15 @@ const ARCHETYPES = {
   casual: { icon: '🎮', color: '#607D8B' }
 };
 
-const RECOMMENDATIONS = {
-  explorer: "You thrive on discovering new experiences. Try checking out the 'Discover' page regularly and join gaming communities that share hidden gems. Consider games with open worlds and multiple areas to explore.",
-  grinder: "Your dedication to progression is impressive! Look for games with prestige systems, seasonal events, and long-term goals. Joining groups focused on your favorite games can help you find the best grinding strategies.",
-  socializer: "Your strength lies in building connections. Consider joining community-focused groups, hosting events, or helping new players. Games with trading, hangout spaces, and cooperative gameplay suit you best.",
-  competitor: "You're driven by challenge and improvement. Look for games with ranked modes, tournaments, and skill-based matchmaking. Consider joining competitive clans to find worthy opponents.",
-  builder: "Your creativity sets you apart. Explore sandbox games, building competitions, and consider learning Roblox Studio to create your own experiences. Developer communities would welcome your talents.",
-  trader: "You have a keen eye for value. Stay updated on limited releases, join trading groups, and consider diversifying your portfolio across different item categories. Knowledge is your best investment.",
-  roleplayer: "Your imagination brings games to life. Look for games with rich lore, character customization, and active RP communities. Consider writing backstories for your characters to deepen immersion.",
-  casual: "You enjoy gaming without pressure, and that's perfectly valid! Explore trending games, try new genres occasionally, and remember that gaming is about having fun. No need to optimize everything."
+const PERSONALIZED_INSIGHTS = {
+  explorer: "You have a natural curiosity for discovering new experiences. Your playstyle suggests you enjoy variety and adventure. We recommend games that offer exploration, quests, and new worlds to discover.",
+  grinder: "Your dedication to progression is impressive! You thrive on long-term goals and visible achievements. We suggest games with deep progression systems, prestige mechanics, and rewarding grind loops.",
+  socializer: "Connection is at the heart of your gaming experience. You value community and friendships. We recommend games with vibrant social features, hangout spaces, and cooperative gameplay.",
+  competitor: "You're driven by challenge and the thrill of competition. Improvement and victory motivate you. We suggest games with PvP, ranked modes, and skill-based matchmaking.",
+  builder: "Creativity flows through your gameplay. You love to design, construct, and express yourself. We recommend sandbox games, building experiences, and creative tools.",
+  trader: "You have a keen eye for value and economics. Strategic thinking is your strength. We suggest games with trading systems, market economies, and business simulations.",
+  roleplayer: "Your imagination transforms every game into a story. Character and narrative drive your experience. We recommend games with rich lore, roleplay communities, and immersive worlds.",
+  casual: "You play for pure enjoyment without pressure. Fun and relaxation are your priorities. We suggest accessible games with quick sessions and simple mechanics."
 };
 
 // Theme Toggle
@@ -62,7 +62,7 @@ async function fetchDetailAnalysis(userId) {
 
 // Render the detail page
 function renderDetail(data) {
-  const { profile, avatarUrl, stats, games, archetypeScores, groups } = data;
+  const { profile, avatarUrl, stats, recommendations, archetypeScores, groups } = data;
 
   // User header
   document.getElementById('detail-avatar').src = avatarUrl ||
@@ -76,11 +76,12 @@ function renderDetail(data) {
   let ageText = '';
   if (years > 0) ageText += `${years} year${years > 1 ? 's' : ''} `;
   if (months > 0 || years === 0) ageText += `${months} month${months !== 1 ? 's' : ''}`;
-  document.getElementById('detail-account-age').textContent = `Member for ${ageText.trim()}`;
+  document.getElementById('detail-account-age').textContent =
+    `${i18n.t('member_for') || 'Member for'} ${ageText.trim()}`;
 
   // Stats
   document.getElementById('stat-badges').textContent = stats.totalBadges.toLocaleString();
-  document.getElementById('stat-games').textContent = stats.uniqueGames.toLocaleString();
+  document.getElementById('stat-games').textContent = stats.gamesAnalyzed.toLocaleString();
   document.getElementById('stat-groups').textContent = stats.totalGroups.toLocaleString();
   document.getElementById('stat-age').textContent = stats.accountAgeDays.toLocaleString();
 
@@ -110,56 +111,68 @@ function renderDetail(data) {
         <span class="score-icon">${ARCHETYPES[key].icon}</span>
         <div class="score-info">
           <div class="score-name">${i18n.t(key)}</div>
-          <div class="score-bar">
-            <div class="score-fill" style="width: ${percent}%; background-color: ${ARCHETYPES[key].color}"></div>
+          <div class="score-bar-container">
+            <div class="score-bar-fill" style="width: ${percent}%; background-color: ${ARCHETYPES[key].color}"></div>
           </div>
         </div>
-        <span class="score-value">${percent}%</span>
+        <span class="score-percent">${percent}%</span>
       </div>
     `;
   }).join('');
 
-  // Recommendation
+  // Personalized insight
   document.getElementById('recommendation-text').textContent =
-    i18n.t(`recommendation_${primary}`) || RECOMMENDATIONS[primary];
+    i18n.t(`insight_${primary}`) || PERSONALIZED_INSIGHTS[primary];
 
-  // Games list
+  // Recommended games list
   const gamesList = document.getElementById('games-list');
-  if (games.length === 0) {
+  if (!recommendations || recommendations.length === 0) {
     gamesList.innerHTML = `
       <div class="empty-state">
-        <p>${i18n.t('no_games_found') || 'No games found based on badge data.'}</p>
+        <p>${i18n.t('no_recommendations') || 'Unable to generate recommendations. Try analyzing more data.'}</p>
       </div>
     `;
   } else {
-    gamesList.innerHTML = games.slice(0, 30).map((game, index) => `
-      <a href="https://www.roblox.com/games/${game.rootPlaceId}" target="_blank" rel="noopener" class="game-link">
-        <div class="game-item">
-          <img
-            src="https://thumbnails.roblox.com/v1/games/icons?universeIds=${game.universeId}&size=150x150&format=Png"
-            alt="${game.name}"
-            class="game-icon"
-            onerror="this.src='https://tr.rbxcdn.com/30DAY-AvatarHeadshot-placeholder/150/150/AvatarHeadshot/Png/noFilter'"
-          >
-          <div class="game-info">
-            <div class="game-name">${escapeHtml(game.name)}</div>
-            <div class="game-meta">
-              ${game.genre ? `<span>${game.genre}</span> · ` : ''}
-              <span>${formatNumber(game.visits)} visits</span>
-              ${game.playing ? ` · <span>${formatNumber(game.playing)} playing</span>` : ''}
+    gamesList.innerHTML = recommendations.slice(0, 20).map((game) => {
+      const matchLevel = game.recommendationScore >= 70 ? 'high'
+        : game.recommendationScore >= 40 ? 'medium' : 'low';
+      const matchLabel = game.recommendationScore >= 70
+        ? (i18n.t('great_match') || 'Great Match')
+        : game.recommendationScore >= 40
+          ? (i18n.t('good_match') || 'Good Match')
+          : (i18n.t('suggested') || 'Suggested');
+
+      return `
+        <a href="${game.gameUrl}" target="_blank" rel="noopener" class="game-link">
+          <div class="game-item">
+            <img
+              src="https://thumbnails.roblox.com/v1/games/icons?universeIds=${game.universeId}&size=150x150&format=Png"
+              alt="${escapeHtml(game.name)}"
+              class="game-icon"
+              onerror="this.src='https://tr.rbxcdn.com/30DAY-AvatarHeadshot-placeholder/150/150/AvatarHeadshot/Png/noFilter'"
+            >
+            <div class="game-info">
+              <div class="game-name">${escapeHtml(game.name)}</div>
+              <div class="game-meta">
+                ${game.genre ? `<span>${game.genre}</span> · ` : ''}
+                <span>${formatNumber(game.visits)} ${i18n.t('visits') || 'visits'}</span>
+                ${game.playing ? ` · <span>${formatNumber(game.playing)} ${i18n.t('playing') || 'playing'}</span>` : ''}
+              </div>
+            </div>
+            <div class="game-recommendation">
+              <div class="recommendation-score">
+                <div class="score-bar">
+                  <div class="score-fill" style="width: ${game.recommendationScore}%"></div>
+                </div>
+                <span class="score-value">${game.recommendationScore}%</span>
+              </div>
+              <span class="match-badge ${matchLevel}">${matchLabel}</span>
+              <div class="recommendation-reason">${game.recommendationReason}</div>
             </div>
           </div>
-          <div class="game-engagement">
-            <div class="engagement-bar">
-              <div class="engagement-fill" style="width: ${game.engagementScore}%"></div>
-            </div>
-            <div class="engagement-label">
-              <span class="badge-count">🏅 ${game.badgeCount}</span>
-            </div>
-          </div>
-        </div>
-      </a>
-    `).join('');
+        </a>
+      `;
+    }).join('');
   }
 
   // Show result, hide loading

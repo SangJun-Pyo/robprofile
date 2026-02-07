@@ -1,5 +1,7 @@
 // GET /api/detail/[userId]
-// Detailed analysis: badges → games reverse mapping + engagement scoring
+// Detailed analysis with personalized game recommendations
+
+import { RECOMMENDATION_RULES, getRecommendedGames } from '../../lib/recommendation.js';
 
 export async function onRequestGet(context) {
   const { params } = context;
@@ -49,8 +51,7 @@ export async function onRequestGet(context) {
       entry.badges.push({
         id: badge.id,
         name: badge.name,
-        description: badge.description,
-        imageUrl: badge.imageUrl
+        description: badge.description
       });
       entry.badgeCount++;
     }
@@ -59,16 +60,12 @@ export async function onRequestGet(context) {
     const universeIds = Array.from(universeMap.keys());
     const gamesMetadata = await fetchGamesMetadata(universeIds);
 
-    // Step 5: Merge game metadata with badge data and calculate engagement
+    // Step 5: Merge game metadata with badge data
     const games = [];
-    const maxBadgeCount = Math.max(...Array.from(universeMap.values()).map(e => e.badgeCount), 1);
 
     for (const [universeId, entry] of universeMap) {
       const gameMeta = gamesMetadata[universeId];
       if (!gameMeta) continue;
-
-      // Calculate engagement score (0-100)
-      const engagementScore = Math.round((entry.badgeCount / maxBadgeCount) * 100);
 
       games.push({
         universeId,
@@ -80,15 +77,11 @@ export async function onRequestGet(context) {
         playing: gameMeta.playing,
         visits: gameMeta.visits,
         maxPlayers: gameMeta.maxPlayers,
-        iconUrl: `https://thumbnails.roblox.com/v1/games/icons?universeIds=${universeId}&size=150x150&format=Png&isCircular=false`,
-        badgeCount: entry.badgeCount,
-        engagementScore,
-        badges: entry.badges.slice(0, 5) // Top 5 badges per game
+        created: gameMeta.created,
+        updated: gameMeta.updated,
+        badgeCount: entry.badgeCount
       });
     }
-
-    // Sort by engagement score (badge count)
-    games.sort((a, b) => b.engagementScore - a.engagementScore);
 
     // Step 6: Fetch avatar thumbnail
     let avatarUrl = null;
@@ -119,7 +112,17 @@ export async function onRequestGet(context) {
     // Step 8: Calculate detailed archetype scores
     const archetypeScores = calculateDetailedArchetypeScores(games, allBadges, groups, profile);
 
-    // Step 9: Build response
+    // Step 9: Calculate game recommendations based on archetype
+    const recommendedGames = getRecommendedGames(games, archetypeScores.scores, 30);
+
+    // Add icon URLs to recommended games
+    const gamesWithIcons = recommendedGames.map(game => ({
+      ...game,
+      iconUrl: `https://thumbnails.roblox.com/v1/games/icons?universeIds=${game.universeId}&size=150x150&format=Png&isCircular=false`,
+      gameUrl: `https://www.roblox.com/games/${game.rootPlaceId}`
+    }));
+
+    // Step 10: Build response
     const response = {
       profile: {
         id: profile.id,
@@ -133,13 +136,13 @@ export async function onRequestGet(context) {
       avatarUrl,
       stats: {
         totalBadges: allBadges.length,
-        uniqueGames: games.length,
+        gamesAnalyzed: games.length,
         totalGroups: groups.length,
         accountAgeDays: Math.floor((Date.now() - new Date(profile.created).getTime()) / (1000 * 60 * 60 * 24))
       },
-      games: games.slice(0, 50), // Top 50 games by engagement
       archetypeScores,
-      groups: groups.slice(0, 20) // Top 20 groups
+      recommendations: gamesWithIcons,
+      groups: groups.slice(0, 20)
     };
 
     return new Response(JSON.stringify(response), {
@@ -226,27 +229,23 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
     casual: 0
   };
 
-  // Genre keywords mapping
-  const genreKeywords = {
-    explorer: ['adventure', 'explore', 'discover', 'world', 'travel', 'quest', 'mystery', 'horror', 'survival'],
-    grinder: ['simulator', 'tycoon', 'idle', 'clicker', 'farm', 'grind', 'afk', 'upgrade', 'incremental'],
-    socializer: ['hangout', 'chat', 'party', 'club', 'social', 'friends', 'cafe', 'restaurant', 'town'],
-    competitor: ['pvp', 'fight', 'battle', 'war', 'arena', 'tournament', 'ranked', 'fps', 'shooter', 'combat', 'sword'],
-    builder: ['build', 'create', 'studio', 'design', 'craft', 'sandbox', 'block', 'construct', 'architect'],
-    trader: ['trade', 'trading', 'market', 'economy', 'shop', 'sell', 'buy', 'limited', 'merchant'],
-    roleplayer: ['roleplay', 'rp', 'story', 'life', 'adopt', 'family', 'school', 'hospital', 'brookhaven', 'bloxburg'],
-    casual: ['obby', 'minigame', 'fun', 'easy', 'simple', 'casual', 'escape', 'parkour', 'race']
-  };
+  // Use keywords from RECOMMENDATION_RULES for consistency
+  const archetypeKeywords = {};
+  for (const [archetype, rules] of Object.entries(RECOMMENDATION_RULES)) {
+    archetypeKeywords[archetype] = rules.keywords;
+  }
 
-  // 1. Analyze games by name/genre (weighted by engagement)
+  // 1. Analyze games by name/genre (weighted by badge count as engagement proxy)
+  const maxBadgeCount = Math.max(...games.map(g => g.badgeCount), 1);
+
   for (const game of games) {
     const text = `${game.name} ${game.description || ''} ${game.genre || ''}`.toLowerCase();
-    const weight = game.engagementScore / 100; // 0-1
+    const engagementWeight = game.badgeCount / maxBadgeCount; // 0-1
 
-    for (const [archetype, keywords] of Object.entries(genreKeywords)) {
+    for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
       for (const kw of keywords) {
         if (text.includes(kw)) {
-          scores[archetype] += 3 * weight; // Weighted by engagement
+          scores[archetype] += 3 * (0.5 + engagementWeight * 0.5); // Base + engagement bonus
         }
       }
     }
@@ -255,7 +254,7 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
   // 2. Analyze badges
   for (const badge of badges) {
     const text = `${badge.name} ${badge.description || ''}`.toLowerCase();
-    for (const [archetype, keywords] of Object.entries(genreKeywords)) {
+    for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
       for (const kw of keywords) {
         if (text.includes(kw)) {
           scores[archetype] += 0.5;
@@ -267,7 +266,7 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
   // 3. Analyze groups
   for (const g of groups) {
     const text = (g.group?.name || '').toLowerCase();
-    for (const [archetype, keywords] of Object.entries(genreKeywords)) {
+    for (const [archetype, keywords] of Object.entries(archetypeKeywords)) {
       for (const kw of keywords) {
         if (text.includes(kw)) {
           scores[archetype] += 2;
@@ -277,25 +276,25 @@ function calculateDetailedArchetypeScores(games, badges, groups, profile) {
   }
 
   // 4. Apply meta-signals
-  // Many unique games = Explorer
+  // Many unique games = Explorer tendency
   if (games.length > 20) scores.explorer += 5;
   if (games.length > 40) scores.explorer += 5;
 
-  // Many badges in few games = Grinder
+  // High badge concentration = Grinder tendency
   const avgBadgesPerGame = badges.length / Math.max(games.length, 1);
   if (avgBadgesPerGame > 3) scores.grinder += 5;
   if (avgBadgesPerGame > 5) scores.grinder += 5;
 
-  // Many groups = Socializer
+  // Many groups = Socializer tendency
   if (groups.length > 10) scores.socializer += 3;
   if (groups.length > 20) scores.socializer += 5;
 
   // Account age signals
   const accountAgeDays = Math.floor((Date.now() - new Date(profile.created).getTime()) / (1000 * 60 * 60 * 24));
-  if (accountAgeDays > 365 * 3) scores.grinder += 3; // 3+ years = dedicated
+  if (accountAgeDays > 365 * 3) scores.grinder += 3; // Veterans tend to be dedicated
   if (accountAgeDays < 180 && badges.length < 20) scores.casual += 5; // New + few badges = casual
 
-  // 5. Normalize scores
+  // 5. Normalize scores to 0-1
   const total = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
   const normalized = {};
   for (const [key, value] of Object.entries(scores)) {
