@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-adsense-account" content="ca-pub-7297276836963940">
+  <meta name="description" content="Detailed Roblox playstyle analysis with game history and engagement metrics.">
+  <title>Detailed Analysis - Roblox Archetype</title>
+  <link href='/style.css' rel='stylesheet'>
+  <link rel="canonical" href="https://robprofile.pages.dev/detail.html">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7297276836963940"
+     crossorigin="anonymous"></script>
+  <style>
+    /* Detail page specific styles */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+      padding: 1.5rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+    }
+
+    .detail-avatar {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 3px solid var(--primary-color);
+    }
+
+    .detail-user-info h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-user-info .username {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+
+    .stat-card {
+      background: var(--secondary-bg);
+      padding: 1rem;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .section-title {
+      font-size: 1.25rem;
+      margin: 2rem 0 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .games-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .game-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .game-item:hover {
+      transform: translateX(4px);
+      box-shadow: 0 2px 8px var(--shadow-color);
+    }
+
+    .game-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .game-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .game-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .game-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .game-engagement {
+      width: 100px;
+      text-align: right;
+    }
+
+    .engagement-bar {
+      height: 8px;
+      background: var(--secondary-bg);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.25rem;
+    }
+
+    .engagement-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+      border-radius: 4px;
+      transition: width 0.5s ease;
+    }
+
+    .engagement-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .badge-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: var(--primary-color);
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .archetype-result-detail {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+    }
+
+    .archetype-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .archetype-icon-large {
+      font-size: 3rem;
+    }
+
+    .archetype-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .archetype-subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .confidence-detail {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .confidence-bar-detail {
+      flex: 1;
+      height: 12px;
+      background: var(--secondary-bg);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .confidence-fill-detail {
+      height: 100%;
+      background: linear-gradient(90deg, #4CAF50, #8BC34A);
+      border-radius: 6px;
+    }
+
+    .scores-detail-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .score-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--secondary-bg);
+      border-radius: 8px;
+    }
+
+    .score-icon {
+      font-size: 1.25rem;
+    }
+
+    .score-info {
+      flex: 1;
+    }
+
+    .score-name {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .score-bar {
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      margin-top: 0.25rem;
+      overflow: hidden;
+    }
+
+    .score-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .score-value {
+      font-weight: 600;
+      font-size: 0.9rem;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .top-games-section {
+      margin-top: 2rem;
+    }
+
+    .recommendation-card {
+      background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+      color: white;
+      padding: 1.5rem;
+      border-radius: 16px;
+      margin-top: 1.5rem;
+    }
+
+    .recommendation-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .recommendation-text {
+      opacity: 0.9;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+    }
+
+    .game-link {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .game-link:hover .game-name {
+      color: var(--primary-color);
+    }
+
+    @media (max-width: 600px) {
+      .detail-header {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .game-engagement {
+        width: 80px;
+      }
+
+      .game-icon {
+        width: 48px;
+        height: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Navigation -->
+    <nav class="main-nav">
+      <a href="/" class="nav-logo">Roblox Archetype</a>
+      <ul class="nav-links">
+        <li><a href="/#analyzer" data-i18n="nav_analyze">Analyze</a></li>
+        <li><a href="/about.html" data-i18n="nav_about_us">About Us</a></li>
+        <li><a href="/#archetypes" data-i18n="nav_archetypes">Archetypes</a></li>
+        <li><a href="/#faq" data-i18n="nav_faq">FAQ</a></li>
+      </ul>
+      <div class="nav-actions">
+        <div class="lang-switcher">
+          <button id="lang-en" class="lang-btn active">EN</button>
+          <button id="lang-ko" class="lang-btn">KO</button>
+        </div>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+          <span class="icon-sun">☀️</span>
+          <span class="icon-moon">🌙</span>
+        </button>
+      </div>
+    </nav>
+
+    <main>
+      <a href="/" class="back-link">← Back to Home</a>
+
+      <!-- Loading State -->
+      <div id="detail-loading" class="loading">
+        <div class="spinner"></div>
+        <p data-i18n="loading_detail">Performing detailed analysis...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="detail-error" class="error-box hidden">
+        <p id="detail-error-message"></p>
+        <a href="/" class="btn btn-primary" style="margin-top: 1rem;">Try Again</a>
+      </div>
+
+      <!-- Result Container -->
+      <div id="detail-result" class="hidden">
+        <!-- User Header -->
+        <div class="detail-header">
+          <img id="detail-avatar" src="" alt="Avatar" class="detail-avatar">
+          <div class="detail-user-info">
+            <h1 id="detail-displayname"></h1>
+            <div class="username">@<span id="detail-username"></span></div>
+            <div id="detail-account-age" class="game-meta"></div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value" id="stat-badges">0</div>
+            <div class="stat-label" data-i18n="stat_badges">Badges</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-games">0</div>
+            <div class="stat-label" data-i18n="stat_games">Games Played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-groups">0</div>
+            <div class="stat-label" data-i18n="stat_groups">Groups</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" id="stat-age">0</div>
+            <div class="stat-label" data-i18n="stat_account_age">Days on Roblox</div>
+          </div>
+        </div>
+
+        <!-- Archetype Result -->
+        <div class="archetype-result-detail">
+          <div class="archetype-header">
+            <span id="detail-archetype-icon" class="archetype-icon-large"></span>
+            <div>
+              <div id="detail-archetype-name" class="archetype-title"></div>
+              <div class="archetype-subtitle">
+                <span data-i18n="secondary_type">Secondary:</span>
+                <span id="detail-secondary-icon"></span>
+                <span id="detail-secondary-name"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="confidence-detail">
+            <span data-i18n="confidence">Confidence:</span>
+            <div class="confidence-bar-detail">
+              <div id="detail-confidence-bar" class="confidence-fill-detail"></div>
+            </div>
+            <span id="detail-confidence-value"></span>
+          </div>
+
+          <div id="detail-scores-grid" class="scores-detail-grid"></div>
+
+          <div id="recommendation-card" class="recommendation-card">
+            <div class="recommendation-title" data-i18n="recommendation_title">Based on your playstyle</div>
+            <div id="recommendation-text" class="recommendation-text"></div>
+          </div>
+        </div>
+
+        <!-- Top Games Section -->
+        <div class="top-games-section">
+          <h2 class="section-title">
+            <span>🎮</span>
+            <span data-i18n="estimated_games">Estimated Games Played</span>
+          </h2>
+          <p class="section-desc" data-i18n="games_desc">Based on badges earned. Higher engagement = more badges from that game.</p>
+
+          <div id="games-list" class="games-list"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-bottom">
+        <p>&copy; 2026 Roblox Archetype. <span data-i18n="footer_note">This is a fan project, not affiliated with Roblox Corporation.</span></p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/i18n.js"></script>
+  <script src="/detail.js"></script>
+</body>
+</html>

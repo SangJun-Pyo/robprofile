@@ -20,27 +20,14 @@ function startOAuthLogin() {
   window.location.href = `${API_BASE}/oauth/login`;
 }
 
-// Handle OAuth callback - auto-analyze verified user
-async function handleOAuthCallback(userId, username, displayName) {
-  // Scroll to analyzer section
-  document.getElementById('analyzer')?.scrollIntoView({ behavior: 'smooth' });
-
-  UI.showLoading();
-
-  try {
-    const data = await RobloxAPI.getAnalysisData(userId);
-    const result = AnalysisEngine.computeResult(data.badges, data.groups);
-
-    UI.showResult(
-      { name: username, displayName: displayName, ...data.profile },
-      data.avatarUrl,
-      result
-    );
-  } catch (err) {
-    console.error('OAuth analysis error:', err);
-    UI.showError(i18n.t('error_api'));
-  }
+// Handle OAuth callback - redirect to detailed analysis
+function handleOAuthCallback(userId, username, displayName) {
+  // Redirect to detailed analysis page
+  window.location.href = `/detail.html?userId=${userId}`;
 }
+
+// Current analyzed user (for detail link)
+let currentAnalyzedUserId = null;
 
 // Theme Toggle
 function initTheme() {
@@ -354,7 +341,8 @@ const UI = {
       primaryDesc: document.getElementById('primary-desc'),
       confidenceBar: document.getElementById('confidence-bar'),
       confidenceText: document.getElementById('confidence-text'),
-      scoresChart: document.getElementById('scores-chart')
+      scoresChart: document.getElementById('scores-chart'),
+      viewDetailBtn: document.getElementById('view-detail-btn')
     };
 
     this.elements.form?.addEventListener('submit', (e) => this.handleSubmit(e));
@@ -387,9 +375,18 @@ const UI = {
     this.elements.error?.classList.add('hidden');
     this.elements.result?.classList.remove('hidden');
 
+    // Store user ID for detail link
+    currentAnalyzedUserId = user.id;
+
     // User info
     this.elements.avatar.src = avatarUrl || 'https://tr.rbxcdn.com/30DAY-AvatarHeadshot-placeholder/150/150/AvatarHeadshot/Png/noFilter';
     this.elements.username.textContent = user.displayName || user.name;
+
+    // Show and update detail button
+    if (this.elements.viewDetailBtn && user.id) {
+      this.elements.viewDetailBtn.href = `/detail.html?userId=${user.id}`;
+      this.elements.viewDetailBtn.classList.remove('hidden');
+    }
 
     // Primary archetype
     const primary = result.primary;

@@ -155,7 +155,31 @@ const i18n = {
 
       // Auth
       logout: "Logout",
-      analyze_my_account: "Analyze My Account"
+      analyze_my_account: "Analyze My Account",
+
+      // Detail Page
+      loading_detail: "Performing detailed analysis...",
+      stat_badges: "Badges",
+      stat_games: "Games Played",
+      stat_groups: "Groups",
+      stat_account_age: "Days on Roblox",
+      secondary_type: "Secondary:",
+      estimated_games: "Estimated Games Played",
+      games_desc: "Based on badges earned. Higher engagement = more badges from that game.",
+      recommendation_title: "Based on your playstyle",
+      no_games_found: "No games found based on badge data.",
+      error_no_user: "No user ID provided. Please go back and try again.",
+      view_detail: "View Detailed Analysis",
+
+      // Recommendations
+      recommendation_explorer: "You thrive on discovering new experiences. Try checking out the 'Discover' page regularly and join gaming communities that share hidden gems.",
+      recommendation_grinder: "Your dedication to progression is impressive! Look for games with prestige systems, seasonal events, and long-term goals.",
+      recommendation_socializer: "Your strength lies in building connections. Consider joining community-focused groups and games with cooperative gameplay.",
+      recommendation_competitor: "You're driven by challenge and improvement. Look for games with ranked modes and tournaments.",
+      recommendation_builder: "Your creativity sets you apart. Explore sandbox games and consider learning Roblox Studio.",
+      recommendation_trader: "You have a keen eye for value. Stay updated on limited releases and join trading groups.",
+      recommendation_roleplayer: "Your imagination brings games to life. Look for games with rich lore and active RP communities.",
+      recommendation_casual: "You enjoy gaming without pressure. Explore trending games and remember gaming is about having fun!"
     },
     ko: {
       // Navigation
@@ -309,7 +333,31 @@ const i18n = {
 
       // Auth
       logout: "로그아웃",
-      analyze_my_account: "내 계정으로 분석"
+      analyze_my_account: "내 계정으로 분석",
+
+      // Detail Page
+      loading_detail: "상세 분석 중...",
+      stat_badges: "배지",
+      stat_games: "플레이한 게임",
+      stat_groups: "그룹",
+      stat_account_age: "가입 일수",
+      secondary_type: "부유형:",
+      estimated_games: "추정 플레이 게임",
+      games_desc: "획득한 배지 기반. 참여도가 높을수록 해당 게임에서 더 많은 배지를 획득했음을 의미합니다.",
+      recommendation_title: "당신의 플레이스타일에 맞는 추천",
+      no_games_found: "배지 데이터를 기반으로 한 게임을 찾을 수 없습니다.",
+      error_no_user: "사용자 ID가 제공되지 않았습니다. 다시 시도해주세요.",
+      view_detail: "상세 분석 보기",
+
+      // Recommendations
+      recommendation_explorer: "새로운 경험을 발견하는 것을 즐기시네요. '탐색' 페이지를 자주 확인하고 숨겨진 게임을 공유하는 커뮤니티에 참여해보세요.",
+      recommendation_grinder: "성장에 대한 열정이 대단하시네요! 프레스티지 시스템, 시즌 이벤트, 장기 목표가 있는 게임을 찾아보세요.",
+      recommendation_socializer: "인맥을 쌓는 것이 장점이시네요. 커뮤니티 중심 그룹과 협동 게임플레이가 있는 게임에 참여해보세요.",
+      recommendation_competitor: "도전과 성장에 동기부여를 받으시는군요. 랭크 모드와 토너먼트가 있는 게임을 찾아보세요.",
+      recommendation_builder: "창의력이 뛰어나시네요. 샌드박스 게임을 탐험하고 Roblox Studio를 배워보세요.",
+      recommendation_trader: "가치를 보는 눈이 있으시네요. 리미티드 출시 정보를 확인하고 트레이딩 그룹에 참여해보세요.",
+      recommendation_roleplayer: "상상력이 게임에 생명을 불어넣네요. 풍부한 스토리와 활발한 RP 커뮤니티가 있는 게임을 찾아보세요.",
+      recommendation_casual: "부담 없이 게임을 즐기시네요. 인기 게임을 탐험하고 게임은 즐거움이 목적이라는 걸 기억하세요!"
     }
   },
 
