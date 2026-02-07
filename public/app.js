@@ -15,6 +15,33 @@ const ARCHETYPES = {
 // API Base URL (same origin - backend handles Roblox API calls)
 const API_BASE = '/api';
 
+// OAuth Helper - starts login flow
+function startOAuthLogin() {
+  window.location.href = `${API_BASE}/oauth/login`;
+}
+
+// Handle OAuth callback - auto-analyze verified user
+async function handleOAuthCallback(userId, username, displayName) {
+  // Scroll to analyzer section
+  document.getElementById('analyzer')?.scrollIntoView({ behavior: 'smooth' });
+
+  UI.showLoading();
+
+  try {
+    const data = await RobloxAPI.getAnalysisData(userId);
+    const result = AnalysisEngine.computeResult(data.badges, data.groups);
+
+    UI.showResult(
+      { name: username, displayName: displayName, ...data.profile },
+      data.avatarUrl,
+      result
+    );
+  } catch (err) {
+    console.error('OAuth analysis error:', err);
+    UI.showError(i18n.t('error_api'));
+  }
+}
+
 // Theme Toggle
 function initTheme() {
   const THEME_KEY = 'theme';
@@ -434,9 +461,47 @@ const UI = {
 };
 
 // Initialize app
-function init() {
+async function init() {
   initTheme();
   UI.init();
+
+  // Setup OAuth login buttons
+  document.getElementById('login-cta')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    startOAuthLogin();
+  });
+  document.getElementById('full-login-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    startOAuthLogin();
+  });
+
+  // Check for OAuth callback result in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const oauthResult = urlParams.get('oauth');
+
+  if (oauthResult === 'success') {
+    const userId = urlParams.get('userId');
+    const username = urlParams.get('username');
+    const displayName = urlParams.get('displayName');
+
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+
+    // Auto-analyze the verified user
+    if (userId) {
+      handleOAuthCallback(userId, username, displayName);
+    }
+  } else if (oauthResult === 'error') {
+    const reason = urlParams.get('reason');
+    console.error('OAuth failed:', reason);
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+    // Show error message briefly
+    UI.showError(i18n.t('error_login') || 'Login failed. Please try again.');
+    setTimeout(() => {
+      UI.elements.error?.classList.add('hidden');
+    }, 5000);
+  }
 }
 
 if (document.readyState === 'loading') {

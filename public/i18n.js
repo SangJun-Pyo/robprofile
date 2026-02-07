@@ -150,7 +150,12 @@ const i18n = {
 
       // Errors
       error_not_found: "User not found. Please check the username.",
-      error_api: "Failed to fetch data. Please try again."
+      error_api: "Failed to fetch data. Please try again.",
+      error_login: "Login failed. Please try again.",
+
+      // Auth
+      logout: "Logout",
+      analyze_my_account: "Analyze My Account"
     },
     ko: {
       // Navigation
@@ -299,7 +304,12 @@ const i18n = {
 
       // Errors
       error_not_found: "사용자를 찾을 수 없습니다. 사용자명을 확인해주세요.",
-      error_api: "데이터를 가져오지 못했습니다. 다시 시도해주세요."
+      error_api: "데이터를 가져오지 못했습니다. 다시 시도해주세요.",
+      error_login: "로그인에 실패했습니다. 다시 시도해주세요.",
+
+      // Auth
+      logout: "로그아웃",
+      analyze_my_account: "내 계정으로 분석"
     }
   },
 

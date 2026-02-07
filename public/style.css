@@ -258,6 +258,38 @@ a:hover {
   font-size: 1.1rem;
 }
 
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* Auth UI */
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-name {
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.btn-my-account {
+  margin-top: 1rem;
+}
+
 /* Content Sections */
 .content-section {
   margin: 3rem 0;
