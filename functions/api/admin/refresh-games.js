@@ -1,13 +1,14 @@
 // GET /api/admin/refresh-games?key=...
-// Fetches popular games from Roblox and stores in KV
-// v1.2 - Enhanced error diagnostics
+// Fetches popular games from Roblox explore-api and stores in KV
+// v2.0 - explore-api only, chunked metadata, robust parsing
 
 import { generateTags } from '../../lib/tags-config.js';
 
 const MIN_PLAYING = 500;
-const MIN_VISITS_FALLBACK = 1000000;
 const CACHE_KEY = 'games_pool_v1';
 const STATUS_KEY = 'refresh_status_v1';
+const METADATA_BATCH_SIZE = 35;
+const METADATA_CONCURRENCY = 3;
 
 // Store fetch diagnostics
 const diagnostics = {
@@ -41,45 +42,42 @@ export async function onRequestGet(context) {
   }
 
   try {
-    // Fetch games from multiple sources
     const result = await fetchAllGames();
 
-    if (result.rawCount === 0) {
+    if (result.fetchedUniverseIdsCount === 0) {
       const status = {
         success: false,
         timestamp,
         colo,
-        error: 'No games fetched from any source',
-        diagnostics: diagnostics
+        error: 'No universe IDs fetched from explore-api',
+        diagnostics
       };
       await saveStatus(env, status);
 
       return jsonResponse({
         error: 'No games fetched',
-        message: 'Roblox API may be unavailable',
+        message: 'Roblox explore-api may be unavailable',
         timestamp,
         colo,
         diagnostics
       }, 500);
     }
 
-    if (result.games.length === 0) {
+    if (result.filteredGames.length === 0) {
       const status = {
         success: false,
         timestamp,
         colo,
         error: 'All games filtered out',
-        rawCount: result.rawCount,
-        filteredCount: 0,
+        counts: result.counts,
         diagnostics
       };
       await saveStatus(env, status);
 
       return jsonResponse({
         error: 'No games passed filter',
-        rawCount: result.rawCount,
-        filteredCount: 0,
-        filter: `playing >= ${MIN_PLAYING} OR visits >= ${MIN_VISITS_FALLBACK}`,
+        counts: result.counts,
+        filter: `playing >= ${MIN_PLAYING}`,
         timestamp,
         colo,
         diagnostics
@@ -89,9 +87,12 @@ export async function onRequestGet(context) {
     // Store in KV
     const poolData = {
       updatedAt: timestamp,
-      source: 'roblox public api',
-      count: result.games.length,
-      items: result.games
+      source: 'roblox explore-api',
+      fetchedUniverseIdsCount: result.counts.fetched,
+      enrichedGamesCount: result.counts.enriched,
+      filteredGamesCount: result.counts.filtered,
+      count: result.filteredGames.length,
+      items: result.filteredGames
     };
 
     await env.ROBPROFILE_CACHE.put(CACHE_KEY, JSON.stringify(poolData), {
@@ -103,21 +104,23 @@ export async function onRequestGet(context) {
       success: true,
       timestamp,
       colo,
-      rawCount: result.rawCount,
-      filteredCount: result.games.length,
+      counts: result.counts,
       sources: result.sources
     };
     await saveStatus(env, status);
 
     return jsonResponse({
       success: true,
-      message: `Stored ${result.games.length} games in KV`,
+      message: `Stored ${result.filteredGames.length} games in KV`,
       updatedAt: timestamp,
       colo,
-      rawCount: result.rawCount,
-      filteredCount: result.games.length,
-      sources: result.sources,
-      sample: result.games.slice(0, 3).map(g => ({ name: g.name, playing: g.playing, tags: g.tags }))
+      counts: result.counts,
+      first3Games: result.filteredGames.slice(0, 3).map(g => ({
+        name: g.name,
+        playing: g.playing,
+        universeId: g.universeId
+      })),
+      sources: result.sources
     });
 
   } catch (err) {
@@ -144,7 +147,7 @@ export async function onRequestGet(context) {
 async function saveStatus(env, status) {
   try {
     await env.ROBPROFILE_CACHE.put(STATUS_KEY, JSON.stringify(status), {
-      expirationTtl: 24 * 60 * 60 // 24 hours
+      expirationTtl: 24 * 60 * 60
     });
   } catch (e) {
     console.error('Failed to save status:', e);
@@ -163,20 +166,18 @@ function jsonResponse(data, status = 200) {
  */
 async function trackedFetch(url, label) {
   const startTime = Date.now();
-  let response;
-  let bodyPreview = '';
 
   try {
-    response = await fetch(url);
+    const response = await fetch(url);
     const text = await response.text();
-    bodyPreview = text.slice(0, 300);
+    const bodyPreview = text.slice(0, 500);
 
     diagnostics.requests.push({
       label,
       url,
       status: response.status,
       ok: response.ok,
-      bodyPreview: response.ok ? '(success)' : bodyPreview,
+      bodyPreview: response.ok ? bodyPreview : bodyPreview,
       durationMs: Date.now() - startTime
     });
 
@@ -197,89 +198,144 @@ async function trackedFetch(url, label) {
 }
 
 /**
- * Fetch games from multiple Roblox API sources
+ * Extract universeIds from explore-api get-sort-content response.
+ * The response structure can vary, so we try multiple paths.
  */
-async function fetchAllGames() {
-  const allGames = new Map();
-  const sources = {
-    gamesApi: { attempted: 0, success: 0, games: 0 },
-    discoverApi: { attempted: 0, success: 0, games: 0 }
-  };
+function extractUniverseIds(data) {
+  const ids = new Map(); // universeId -> { universeId, placeId }
 
-  // Source 1: Games API - Popular sorts
-  const sortTokens = ['GamesPageMostEngagingSort', 'GamesPageHomeSorts'];
+  function addEntry(universeId, placeId) {
+    const uid = Number(universeId);
+    if (uid && uid > 0 && !ids.has(uid)) {
+      ids.set(uid, { universeId: uid, placeId: placeId ? Number(placeId) : null });
+    }
+  }
 
-  for (const sortToken of sortTokens) {
-    sources.gamesApi.attempted++;
-    const url = `https://games.roblox.com/v1/games/list?model.sortToken=${sortToken}&model.maxRows=50`;
-    const result = await trackedFetch(url, `games-api-${sortToken}`);
-
-    if (result.ok) {
-      sources.gamesApi.success++;
-      const gameEntries = result.data.games || [];
-      sources.gamesApi.games += gameEntries.length;
-
-      for (const g of gameEntries) {
-        if (g.universeId && !allGames.has(g.universeId)) {
-          allGames.set(g.universeId, {
-            universeId: g.universeId,
-            placeId: g.placeId
-          });
-        }
+  function extractFromArray(arr) {
+    if (!Array.isArray(arr)) return;
+    for (const item of arr) {
+      if (!item || typeof item !== 'object') continue;
+      const uid = item.universeId || item.UniverseId || item.universe_id;
+      const pid = item.placeId || item.rootPlaceId || item.PlaceId || item.RootPlaceId || item.place_id;
+      if (uid) {
+        addEntry(uid, pid);
       }
     }
   }
 
-  // Source 2: Discover API (explore-api)
+  if (!data || typeof data !== 'object') return ids;
+
+  // Path 1: data.games[] (common)
+  extractFromArray(data.games);
+
+  // Path 2: data.experiences[]
+  extractFromArray(data.experiences);
+
+  // Path 3: data.data[] (generic wrapper)
+  extractFromArray(data.data);
+
+  // Path 4: data.sorts[].games[] or data.sorts[].experiences[]
+  if (Array.isArray(data.sorts)) {
+    for (const sort of data.sorts) {
+      extractFromArray(sort?.games);
+      extractFromArray(sort?.experiences);
+    }
+  }
+
+  // Path 5: data.sortContents[] or data.sortContent[]
+  extractFromArray(data.sortContents);
+  extractFromArray(data.sortContent);
+
+  // Path 6: data is itself an array
+  if (Array.isArray(data)) {
+    extractFromArray(data);
+  }
+
+  // Path 7: data has numbered/keyed entries containing universeId directly
+  // e.g. { "0": { universeId: ... }, "1": { universeId: ... } }
+  if (ids.size === 0) {
+    for (const key of Object.keys(data)) {
+      const val = data[key];
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        const uid = val.universeId || val.UniverseId;
+        const pid = val.placeId || val.rootPlaceId;
+        if (uid) addEntry(uid, pid);
+      }
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Fetch games from Roblox explore-api only
+ */
+async function fetchAllGames() {
+  const allGames = new Map();
+  const sources = {
+    discoverApi: { attempted: 0, success: 0, universeIds: 0, sortDetails: [] }
+  };
+
+  // Discover API (explore-api)
   const sessionId = crypto.randomUUID();
   const sortsUrl = `https://apis.roblox.com/explore-api/v1/get-sorts?sessionId=${sessionId}`;
   const sortsResult = await trackedFetch(sortsUrl, 'discover-sorts');
 
   if (sortsResult.ok) {
     const sorts = sortsResult.data.sorts || [];
-    const usefulSorts = sorts.slice(0, 3);
+    // Use up to 5 sorts to get a broad pool
+    const usefulSorts = sorts.slice(0, 5);
 
     for (const sort of usefulSorts) {
       sources.discoverApi.attempted++;
       const sortId = sort.topicId || sort.sortId || sort.token;
+      if (!sortId) continue;
+
       const contentUrl = `https://apis.roblox.com/explore-api/v1/get-sort-content?sessionId=${sessionId}&sortId=${sortId}`;
       const contentResult = await trackedFetch(contentUrl, `discover-content-${sortId}`);
 
       if (contentResult.ok) {
         sources.discoverApi.success++;
-        const experiences = contentResult.data.experiences || contentResult.data.games || [];
-        sources.discoverApi.games += experiences.length;
 
-        for (const exp of experiences) {
-          const universeId = exp.universeId || exp.placeId;
-          if (universeId && !allGames.has(universeId)) {
-            allGames.set(universeId, {
-              universeId,
-              placeId: exp.placeId || exp.rootPlaceId
-            });
+        const extracted = extractUniverseIds(contentResult.data);
+        const countFromSort = extracted.size;
+        sources.discoverApi.universeIds += countFromSort;
+        sources.discoverApi.sortDetails.push({
+          sortId,
+          name: sort.name || sort.displayName || sortId,
+          extracted: countFromSort,
+          responseKeys: Object.keys(contentResult.data || {})
+        });
+
+        for (const [uid, entry] of extracted) {
+          if (!allGames.has(uid)) {
+            allGames.set(uid, entry);
           }
         }
       }
     }
   }
 
-  const rawCount = allGames.size;
+  const fetchedUniverseIdsCount = allGames.size;
 
-  if (rawCount === 0) {
-    return { games: [], rawCount: 0, sources };
+  if (fetchedUniverseIdsCount === 0) {
+    return {
+      filteredGames: [],
+      fetchedUniverseIdsCount: 0,
+      counts: { fetched: 0, enriched: 0, filtered: 0 },
+      sources
+    };
   }
 
-  // Fetch full metadata for all collected games
+  // Fetch full metadata in chunks with concurrency limit
   const universeIds = Array.from(allGames.keys());
-  const gamesWithMeta = await fetchGamesMetadata(universeIds);
+  const gamesWithMeta = await fetchGamesMetadataChunked(universeIds);
 
-  // Filter and tag games
+  const enrichedGamesCount = gamesWithMeta.length;
+
+  // Filter: playing >= 500 only
   const filteredGames = gamesWithMeta
-    .filter(g => {
-      if (g.playing >= MIN_PLAYING) return true;
-      if (!g.playing && g.visits >= MIN_VISITS_FALLBACK) return true;
-      return false;
-    })
+    .filter(g => g.playing >= MIN_PLAYING)
     .map(g => ({
       universeId: g.universeId,
       placeId: g.rootPlaceId,
@@ -296,39 +352,67 @@ async function fetchAllGames() {
     }));
 
   return {
-    games: filteredGames,
-    rawCount: gamesWithMeta.length,
+    filteredGames,
+    fetchedUniverseIdsCount,
+    counts: {
+      fetched: fetchedUniverseIdsCount,
+      enriched: enrichedGamesCount,
+      filtered: filteredGames.length
+    },
     sources
   };
 }
 
 /**
- * Batch fetch game metadata
+ * Fetch game metadata in chunks with concurrency limit.
+ * Failed chunks are logged but don't fail the whole operation.
  */
-async function fetchGamesMetadata(universeIds) {
+async function fetchGamesMetadataChunked(universeIds) {
   const games = [];
-  const batchSize = 100;
+  const chunks = [];
 
-  for (let i = 0; i < universeIds.length; i += batchSize) {
-    const batch = universeIds.slice(i, i + batchSize);
-    const url = `https://games.roblox.com/v1/games?universeIds=${batch.join(',')}`;
-    const result = await trackedFetch(url, `metadata-batch-${i}`);
+  // Split into chunks
+  for (let i = 0; i < universeIds.length; i += METADATA_BATCH_SIZE) {
+    chunks.push(universeIds.slice(i, i + METADATA_BATCH_SIZE));
+  }
 
-    if (result.ok) {
-      for (const game of (result.data.data || [])) {
-        games.push({
-          universeId: game.id,
-          rootPlaceId: game.rootPlaceId,
-          name: game.name,
-          description: game.description,
-          genre: game.genre,
-          playing: game.playing,
-          visits: game.visits,
-          favoritedCount: game.favoritedCount,
-          maxPlayers: game.maxPlayers,
-          created: game.created,
-          updated: game.updated,
-          creator: game.creator
+  // Process chunks with concurrency limit
+  for (let i = 0; i < chunks.length; i += METADATA_CONCURRENCY) {
+    const batch = chunks.slice(i, i + METADATA_CONCURRENCY);
+    const promises = batch.map((chunk, idx) => {
+      const chunkIndex = i + idx;
+      const url = `https://games.roblox.com/v1/games?universeIds=${chunk.join(',')}`;
+      return trackedFetch(url, `metadata-chunk-${chunkIndex}(${chunk.length}ids)`);
+    });
+
+    const results = await Promise.all(promises);
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
+      const chunkIndex = i + j;
+      if (result.ok) {
+        for (const game of (result.data.data || [])) {
+          games.push({
+            universeId: game.id,
+            rootPlaceId: game.rootPlaceId,
+            name: game.name,
+            description: game.description,
+            genre: game.genre,
+            playing: game.playing,
+            visits: game.visits,
+            favoritedCount: game.favoritedCount,
+            maxPlayers: game.maxPlayers,
+            created: game.created,
+            updated: game.updated,
+            creator: game.creator
+          });
+        }
+      } else {
+        diagnostics.errors.push({
+          label: `metadata-chunk-${chunkIndex}-failed`,
+          detail: `Chunk of ${batch[j]?.length || '?'} IDs failed`,
+          status: result.status,
+          body: result.body?.slice(0, 200) || result.error
         });
       }
     }
