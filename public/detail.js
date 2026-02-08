@@ -159,6 +159,8 @@ function renderRecommendations(recData, primaryArchetype) {
     return;
   }
 
+  const PLACEHOLDER_IMG = 'https://tr.rbxcdn.com/30DAY-AvatarHeadshot-placeholder/150/150/AvatarHeadshot/Png/noFilter';
+
   gamesList.innerHTML = recommendations.map((game) => {
     const score = game.recommendScore || game.recommendationScore || 0;
     const matchLevel = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
@@ -178,14 +180,18 @@ function renderRecommendations(recData, primaryArchetype) {
       `<span class="game-tag">${tag}</span>`
     ).join('');
 
+    // Use resolved CDN URL; fall back to placeholder if empty
+    const imgSrc = game.iconUrl || PLACEHOLDER_IMG;
+
     return `
       <a href="${game.gameUrl}" target="_blank" rel="noopener" class="game-link">
         <div class="game-item">
           <img
-            src="${game.iconUrl || `https://thumbnails.roblox.com/v1/games/icons?universeIds=${game.universeId}&size=150x150&format=Png`}"
+            src="${imgSrc}"
             alt="${escapeHtml(game.name)}"
             class="game-icon"
-            onerror="this.src='https://tr.rbxcdn.com/30DAY-AvatarHeadshot-placeholder/150/150/AvatarHeadshot/Png/noFilter'"
+            loading="lazy"
+            onerror="if(!this.dataset.retried){this.dataset.retried='1';this.src='${PLACEHOLDER_IMG}';console.warn('Thumbnail failed:',this.alt,this.src)}"
           >
           <div class="game-info">
             <div class="game-name">${escapeHtml(game.name)}</div>

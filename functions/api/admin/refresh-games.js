@@ -333,6 +333,10 @@ async function fetchAllGames() {
 
   const enrichedGamesCount = gamesWithMeta.length;
 
+  // Resolve actual thumbnail CDN URLs
+  const enrichedIds = gamesWithMeta.map(g => g.universeId);
+  const thumbnailMap = await fetchThumbnailsChunked(enrichedIds);
+
   // Filter: playing >= 500 only
   const filteredGames = gamesWithMeta
     .filter(g => g.playing >= MIN_PLAYING)
@@ -346,7 +350,7 @@ async function fetchAllGames() {
       visits: g.visits || 0,
       favorites: g.favoritedCount || 0,
       genre: g.genre || '',
-      iconUrl: `https://thumbnails.roblox.com/v1/games/icons?universeIds=${g.universeId}&size=150x150&format=Png`,
+      iconUrl: thumbnailMap.get(g.universeId) || '',
       gameUrl: `https://www.roblox.com/games/${g.rootPlaceId}`,
       tags: generateTags(g)
     }));
@@ -419,4 +423,41 @@ async function fetchGamesMetadataChunked(universeIds) {
   }
 
   return games;
+}
+
+/**
+ * Batch-resolve actual thumbnail CDN URLs from Roblox thumbnails API.
+ * Returns Map<universeId, imageUrl>.
+ */
+async function fetchThumbnailsChunked(universeIds) {
+  const thumbnails = new Map();
+  const chunks = [];
+
+  for (let i = 0; i < universeIds.length; i += METADATA_BATCH_SIZE) {
+    chunks.push(universeIds.slice(i, i + METADATA_BATCH_SIZE));
+  }
+
+  for (let i = 0; i < chunks.length; i += METADATA_CONCURRENCY) {
+    const batch = chunks.slice(i, i + METADATA_CONCURRENCY);
+    const promises = batch.map((chunk, idx) => {
+      const chunkIndex = i + idx;
+      const url = `https://thumbnails.roblox.com/v1/games/icons?universeIds=${chunk.join(',')}&returnPolicy=PlaceHolder&size=150x150&format=Png&isCircular=false`;
+      return trackedFetch(url, `thumbnails-chunk-${chunkIndex}(${chunk.length}ids)`);
+    });
+
+    const results = await Promise.all(promises);
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
+      if (result.ok) {
+        for (const entry of (result.data.data || [])) {
+          if (entry.imageUrl && entry.state === 'Completed') {
+            thumbnails.set(entry.targetId, entry.imageUrl);
+          }
+        }
+      }
+    }
+  }
+
+  return thumbnails;
 }

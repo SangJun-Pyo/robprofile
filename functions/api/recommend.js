@@ -239,11 +239,23 @@ async function fallbackRecommendations(userId, archetypeData = null) {
     const data = await response.json();
     const gameEntries = data.games || [];
 
-    // Get metadata for these games
+    // Get metadata for these games (chunk to avoid 400)
     const universeIds = gameEntries.map(g => g.universeId).filter(Boolean);
-    const metaUrl = `https://games.roblox.com/v1/games?universeIds=${universeIds.slice(0, 50).join(',')}`;
+    const idsBatch = universeIds.slice(0, 50);
+    const metaUrl = `https://games.roblox.com/v1/games?universeIds=${idsBatch.join(',')}`;
     const metaResponse = await fetch(metaUrl);
     const metaData = metaResponse.ok ? await metaResponse.json() : { data: [] };
+
+    // Resolve thumbnail CDN URLs
+    const thumbUrl = `https://thumbnails.roblox.com/v1/games/icons?universeIds=${idsBatch.join(',')}&returnPolicy=PlaceHolder&size=150x150&format=Png&isCircular=false`;
+    const thumbResponse = await fetch(thumbUrl);
+    const thumbData = thumbResponse.ok ? await thumbResponse.json() : { data: [] };
+    const thumbMap = new Map();
+    for (const entry of (thumbData.data || [])) {
+      if (entry.imageUrl && entry.state === 'Completed') {
+        thumbMap.set(entry.targetId, entry.imageUrl);
+      }
+    }
 
     // Process games
     const { generateTags } = await import('../lib/tags-config.js');
@@ -260,7 +272,7 @@ async function fallbackRecommendations(userId, archetypeData = null) {
           genre: g.genre,
           playing: g.playing,
           visits: g.visits,
-          iconUrl: `https://thumbnails.roblox.com/v1/games/icons?universeIds=${g.id}&size=150x150&format=Png`,
+          iconUrl: thumbMap.get(g.id) || '',
           gameUrl: `https://www.roblox.com/games/${g.rootPlaceId}`,
           tags,
           recommendScore: score,
