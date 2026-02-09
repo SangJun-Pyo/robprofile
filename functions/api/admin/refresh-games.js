@@ -3,10 +3,9 @@
 // v2.0 - explore-api only, chunked metadata, robust parsing
 
 import { generateTags } from '../../lib/tags-config.js';
+import { CACHE_KEY, STATUS_KEY } from '../../lib/constants.js';
 
 const MIN_PLAYING = 500;
-const CACHE_KEY = 'games_pool_v1';
-const STATUS_KEY = 'refresh_status_v1';
 const METADATA_BATCH_SIZE = 35;
 const METADATA_CONCURRENCY = 3;
 

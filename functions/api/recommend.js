@@ -2,14 +2,15 @@
 // Returns personalized game recommendations based on user's archetype scores
 
 import { calculateRecommendScore } from '../lib/tags-config.js';
+import { CACHE_KEY } from '../lib/constants.js';
 
-const CACHE_KEY = 'games_pool_v1';
 const MAX_RECOMMENDATIONS = 12;
 
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId');
+  const branch = env.CF_PAGES_BRANCH || 'unknown';
 
   // Validate userId
   if (!userId || !/^\d+$/.test(userId)) {
@@ -19,10 +20,13 @@ export async function onRequestGet(context) {
     });
   }
 
-  // Check KV binding
-  if (!env.ROBPROFILE_CACHE) {
-    // Fallback: use live API if KV not configured
-    return await fallbackRecommendations(userId);
+  // (a) KV binding 존재 여부
+  const kvExists = !!env.ROBPROFILE_CACHE;
+  console.log(`[recommend] (a) KV binding exists: ${kvExists}`);
+
+  if (!kvExists) {
+    console.log('[recommend] KV binding missing — falling back to live API');
+    return await fallbackRecommendations(userId, null, branch);
   }
 
   try {
@@ -36,12 +40,48 @@ export async function onRequestGet(context) {
       });
     }
 
-    // Step 2: Load games pool from KV
-    let poolData = await env.ROBPROFILE_CACHE.get(CACHE_KEY, 'json');
+    // (b) KV key 이름
+    console.log(`[recommend] (b) KV key: "${CACHE_KEY}"`);
+
+    // Step 2: Load games pool from KV (raw string first for diagnostics)
+    const rawString = await env.ROBPROFILE_CACHE.get(CACHE_KEY, 'text');
+
+    // (c) raw string 길이
+    const rawLen = rawString ? rawString.length : 0;
+    console.log(`[recommend] (c) KV raw string length: ${rawLen}`);
+
+    // (d) JSON.parse
+    let poolData = null;
+    try {
+      if (rawString) {
+        poolData = JSON.parse(rawString);
+        console.log('[recommend] (d) JSON.parse: success');
+      } else {
+        console.log('[recommend] (d) JSON.parse: skipped (empty value)');
+      }
+    } catch (parseErr) {
+      console.error(`[recommend] (d) JSON.parse: FAILED — ${parseErr.message}`);
+      return new Response(JSON.stringify({
+        error: 'KV data corrupted',
+        details: parseErr.message,
+        branch
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // (e) pool 배열 길이
+    const poolLen = poolData?.items?.length ?? 0;
+    console.log(`[recommend] (e) pool items length: ${poolLen}`);
+
+    // (f) 실행 환경
+    const colo = request.cf?.colo || 'unknown';
+    console.log(`[recommend] (f) env: branch=${branch}, colo=${colo}`);
 
     if (!poolData || !poolData.items || poolData.items.length === 0) {
-      // Pool empty or expired - use fallback
-      return await fallbackRecommendations(userId, archetypeData);
+      console.log('[recommend] Pool empty — falling back to live API');
+      return await fallbackRecommendations(userId, archetypeData, branch);
     }
 
     // Step 3: Score each game
@@ -60,6 +100,7 @@ export async function onRequestGet(context) {
 
     return new Response(JSON.stringify({
       updatedAt: poolData.updatedAt,
+      branch,
       basis: {
         primary: archetypeData.primary,
         secondary: archetypeData.secondary,
@@ -90,7 +131,8 @@ export async function onRequestGet(context) {
     console.error('Recommend error:', err);
     return new Response(JSON.stringify({
       error: 'Recommendation failed',
-      details: err.message
+      details: err.message,
+      branch
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -211,7 +253,7 @@ function calculateArchetypeScores(badges, groups, profile) {
 /**
  * Fallback: fetch recommendations directly from Roblox API
  */
-async function fallbackRecommendations(userId, archetypeData = null) {
+async function fallbackRecommendations(userId, archetypeData = null, branch = 'unknown') {
   try {
     // Get archetype if not provided
     if (!archetypeData) {
@@ -285,6 +327,7 @@ async function fallbackRecommendations(userId, archetypeData = null) {
     return new Response(JSON.stringify({
       updatedAt: new Date().toISOString(),
       source: 'live_fallback',
+      branch,
       basis: {
         primary: archetypeData.primary,
         secondary: archetypeData.secondary,

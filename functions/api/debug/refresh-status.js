@@ -2,8 +2,7 @@
 // Returns the most recent refresh-games status from KV
 // Falls back to reconstructing status from game pool metadata if status key is missing
 
-const STATUS_KEY = 'refresh_status_v1';
-const POOL_KEY = 'games_pool_v1';
+import { CACHE_KEY as POOL_KEY, STATUS_KEY } from '../../lib/constants.js';
 
 export async function onRequestGet(context) {
   const { env } = context;
