@@ -1,50 +1,53 @@
 // GET /api/debug/refresh-status
-// Returns the most recent refresh-games result from KV
+// Returns the most recent refresh-games status from KV
+// Falls back to reconstructing status from game pool metadata if status key is missing
 
 const STATUS_KEY = 'refresh_status_v1';
+const POOL_KEY = 'games_pool_v1';
 
 export async function onRequestGet(context) {
   const { env } = context;
 
   // Check if KV is bound
   if (!env.ROBPROFILE_CACHE) {
-    return new Response(JSON.stringify({
-      error: 'KV not configured',
-      help: 'Add ROBPROFILE_CACHE KV binding in Cloudflare Pages settings'
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ error: 'KV not configured', help: 'Add ROBPROFILE_CACHE KV binding in Cloudflare Pages settings' }, 500);
   }
 
   try {
     const status = await env.ROBPROFILE_CACHE.get(STATUS_KEY, 'json');
 
-    if (!status) {
-      return new Response(JSON.stringify({
-        message: 'No refresh status found',
-        hint: 'Call /api/admin/refresh-games first to populate the game pool'
-      }, null, 2), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
+    if (status) {
+      return json(status);
+    }
+
+    // Fallback: reconstruct status from game pool metadata
+    const pool = await env.ROBPROFILE_CACHE.get(POOL_KEY, 'json');
+
+    if (pool) {
+      return json({
+        success: true,
+        updatedAt: pool.updatedAt || null,
+        count: pool.count || pool.items?.length || 0,
+        source: {
+          api: pool.source || 'unknown',
+          universeIdsFetched: pool.fetchedUniverseIdsCount || null,
+          enriched: pool.enrichedGamesCount || null,
+          filtered: pool.filteredGamesCount || pool.count || null
+        },
+        _fallback: true
       });
     }
 
-    return new Response(JSON.stringify(status, null, 2), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store'
-      }
-    });
+    return json({ message: 'No refresh status or game pool found', hint: 'Call /api/admin/refresh-games first' }, 404);
 
   } catch (err) {
-    return new Response(JSON.stringify({
-      error: 'Failed to read status',
-      details: err.message
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return json({ error: 'Failed to read status', details: err.message }, 500);
   }
+}
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+  });
 }

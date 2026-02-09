@@ -47,10 +47,10 @@ export async function onRequestGet(context) {
     if (result.fetchedUniverseIdsCount === 0) {
       const status = {
         success: false,
-        timestamp,
-        colo,
+        updatedAt: timestamp,
+        count: 0,
         error: 'No universe IDs fetched from explore-api',
-        diagnostics
+        source: { api: 'roblox explore-api', sortsUsed: 0, universeIdsFetched: 0, enriched: 0, filtered: 0 }
       };
       await saveStatus(env, status);
 
@@ -66,11 +66,16 @@ export async function onRequestGet(context) {
     if (result.filteredGames.length === 0) {
       const status = {
         success: false,
-        timestamp,
-        colo,
+        updatedAt: timestamp,
+        count: 0,
         error: 'All games filtered out',
-        counts: result.counts,
-        diagnostics
+        source: {
+          api: 'roblox explore-api',
+          sortsUsed: result.sources.discoverApi?.success || 0,
+          universeIdsFetched: result.counts.fetched,
+          enriched: result.counts.enriched,
+          filtered: 0
+        }
       };
       await saveStatus(env, status);
 
@@ -99,13 +104,18 @@ export async function onRequestGet(context) {
       expirationTtl: 6 * 60 * 60 // 6 hours
     });
 
-    // Save success status
+    // Save success status (compact — only meta consumed by refresh-status)
     const status = {
       success: true,
-      timestamp,
-      colo,
-      counts: result.counts,
-      sources: result.sources
+      updatedAt: timestamp,
+      count: result.filteredGames.length,
+      source: {
+        api: 'roblox explore-api',
+        sortsUsed: result.sources.discoverApi?.success || 0,
+        universeIdsFetched: result.counts.fetched,
+        enriched: result.counts.enriched,
+        filtered: result.counts.filtered
+      }
     };
     await saveStatus(env, status);
 
@@ -126,11 +136,9 @@ export async function onRequestGet(context) {
   } catch (err) {
     const status = {
       success: false,
-      timestamp,
-      colo,
-      error: err.message,
-      stack: err.stack?.slice(0, 500),
-      diagnostics
+      updatedAt: timestamp,
+      count: 0,
+      error: err.message
     };
     await saveStatus(env, status);
 
