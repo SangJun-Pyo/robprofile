@@ -4,6 +4,7 @@
 
 import { generateTags } from '../../lib/tags-config.js';
 import { CACHE_KEY, STATUS_KEY } from '../../lib/constants.js';
+import { robustFetch } from '../../lib/fetch-utils.js';
 
 const MIN_PLAYING = 500;
 const METADATA_BATCH_SIZE = 35;
@@ -164,44 +165,37 @@ async function saveStatus(env, status) {
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
   });
 }
 
 /**
- * Tracked fetch with diagnostics
+ * Tracked fetch with diagnostics — delegates to robustFetch for timeout/retry/429.
  */
 async function trackedFetch(url, label) {
-  const startTime = Date.now();
+  const result = await robustFetch(url, { timeoutMs: 5000, maxRetries: 1 });
 
-  try {
-    const response = await fetch(url);
-    const text = await response.text();
-    const bodyPreview = text.slice(0, 500);
+  diagnostics.requests.push({
+    label,
+    url,
+    status: result.status,
+    ok: result.ok,
+    bodyPreview: result.ok
+      ? JSON.stringify(result.data).slice(0, 500)
+      : (result.error || '').slice(0, 500),
+    durationMs: result.durationMs
+  });
 
-    diagnostics.requests.push({
-      label,
-      url,
-      status: response.status,
-      ok: response.ok,
-      bodyPreview: response.ok ? bodyPreview : bodyPreview,
-      durationMs: Date.now() - startTime
-    });
-
-    if (response.ok) {
-      return { ok: true, data: JSON.parse(text) };
-    } else {
-      return { ok: false, status: response.status, body: bodyPreview };
-    }
-  } catch (e) {
+  if (!result.ok) {
     diagnostics.errors.push({
       label,
       url,
-      error: e.message,
-      durationMs: Date.now() - startTime
+      error: result.error,
+      durationMs: result.durationMs
     });
-    return { ok: false, error: e.message };
   }
+
+  return result;
 }
 
 /**
