@@ -929,7 +929,7 @@ a:hover {
 
 .footer-section h4 {
   margin-bottom: 1.25rem;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--heading-accent);
   text-transform: uppercase;
@@ -938,7 +938,7 @@ a:hover {
 
 .footer-section p {
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.925rem;
   line-height: 1.7;
   max-width: 280px;
 }
@@ -948,12 +948,12 @@ a:hover {
 }
 
 .footer-section li {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
 .footer-section a {
   color: var(--text-muted);
-  font-size: 0.875rem;
+  font-size: 0.925rem;
   transition: color var(--transition-speed);
 }
 
@@ -967,7 +967,7 @@ a:hover {
   padding-top: 2rem;
   position: relative;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   opacity: 0.8;
 }
 
@@ -1091,6 +1091,17 @@ a:hover {
 /* Utility */
 .hidden {
   display: none !important;
+}
+
+/* Footer desktop refinements */
+@media (min-width: 601px) {
+  .site-footer {
+    margin-top: 8rem;
+  }
+
+  .footer-content {
+    column-gap: 5rem;
+  }
 }
 
 /* Responsive */
