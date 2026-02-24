@@ -318,19 +318,7 @@ a:hover {
   padding: 2rem;
   background: var(--card-bg);
   border-radius: 16px;
-  position: relative;
-  overflow: hidden;
   box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
-}
-
-.content-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .content-section h2 {
@@ -464,19 +452,7 @@ a:hover {
   padding: 2rem;
   background: var(--card-bg);
   border-radius: 16px;
-  position: relative;
-  overflow: hidden;
   box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
-}
-
-.analysis-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .section-header {
@@ -643,19 +619,7 @@ a:hover {
   background: var(--bg-secondary);
   border-radius: 16px;
   padding: 1.5rem;
-  position: relative;
-  overflow: hidden;
   box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
-}
-
-.result-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .result-header {
@@ -869,19 +833,7 @@ a:hover {
   border-radius: 16px;
   padding: 2rem;
   margin: 2rem 0;
-  position: relative;
-  overflow: hidden;
   box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
-}
-
-.contact-section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .contact-section h2 {
