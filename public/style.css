@@ -86,9 +86,19 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 0;
-  border-bottom: 1px solid var(--border-color);
+  position: relative;
   flex-wrap: wrap;
   gap: 1rem;
+}
+
+.main-nav::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .nav-logo {
@@ -307,8 +317,20 @@ a:hover {
   margin: 3rem 0;
   padding: 2rem;
   background: var(--card-bg);
-  border: 1px solid var(--border-color);
   border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
+}
+
+.content-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .content-section h2 {
@@ -441,8 +463,20 @@ a:hover {
   margin: 2rem 0;
   padding: 2rem;
   background: var(--card-bg);
-  border: 1px solid var(--border-color);
   border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
+}
+
+.analysis-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .section-header {
@@ -607,10 +641,21 @@ a:hover {
 /* Result Card */
 .result-card {
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 4px 20px var(--shadow-color);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
+}
+
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .result-header {
@@ -619,7 +664,17 @@ a:hover {
   gap: 1rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.result-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .avatar {
@@ -746,7 +801,17 @@ a:hover {
 .cta-section {
   text-align: center;
   padding-top: 1rem;
-  border-top: 1px solid var(--border-color);
+  position: relative;
+}
+
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .cta-section p {
@@ -801,10 +866,22 @@ a:hover {
 /* Contact Form */
 .contact-section {
   background: var(--card-bg);
-  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 2rem;
   margin: 2rem 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border-color), 0 4px 20px var(--shadow-color);
+}
+
+.contact-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 .contact-section h2 {
@@ -936,10 +1013,20 @@ a:hover {
 .footer-bottom {
   text-align: center;
   padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
+  position: relative;
   color: var(--text-muted);
   font-size: 0.8rem;
   opacity: 0.8;
+}
+
+.footer-bottom::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
 }
 
 /* Legal Pages */
