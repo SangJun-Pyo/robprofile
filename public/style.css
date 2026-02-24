@@ -867,23 +867,31 @@ a:hover {
 
 /* Footer */
 .site-footer {
+  position: relative;
   background: var(--bg-secondary);
-  border-top: 1px solid var(--border-color);
-  margin-top: 3rem;
-  padding: 3rem 0 1.5rem;
+  margin-top: 6rem;
+  padding: 0 0 2rem;
+}
+
+.site-footer::before {
+  content: '';
+  display: block;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gradient-start), var(--gradient-end), transparent);
+  margin-bottom: 4rem;
 }
 
 .footer-content {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  gap: 3rem;
+  gap: 4rem;
   align-items: start;
-  margin-bottom: 2.5rem;
+  margin-bottom: 3.5rem;
 }
 
 .footer-brand h4 {
-  font-size: 1.2rem;
-  margin-bottom: 0.75rem;
+  font-size: 1.25rem;
+  margin-bottom: 0.875rem;
   background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -891,18 +899,19 @@ a:hover {
 }
 
 .footer-section h4 {
-  margin-bottom: 1rem;
-  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--heading-accent);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .footer-section p {
   color: var(--text-muted);
   font-size: 0.875rem;
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 280px;
 }
 
 .footer-section ul {
@@ -910,7 +919,7 @@ a:hover {
 }
 
 .footer-section li {
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.75rem;
 }
 
 .footer-section a {
@@ -926,10 +935,11 @@ a:hover {
 
 .footer-bottom {
   text-align: center;
-  padding-top: 1.5rem;
+  padding-top: 2rem;
   border-top: 1px solid var(--border-color);
   color: var(--text-muted);
   font-size: 0.8rem;
+  opacity: 0.8;
 }
 
 /* Legal Pages */
@@ -1084,7 +1094,17 @@ a:hover {
 
   .footer-content {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 2.5rem;
     text-align: center;
+  }
+
+  .footer-section p {
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .site-footer::before {
+    margin-bottom: 3rem;
   }
 }
